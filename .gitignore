@@ -1,0 +1,4 @@
+*.o
+*.out
+cmake-build-debug/
+*.spv
