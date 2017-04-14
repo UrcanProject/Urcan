@@ -9,8 +9,8 @@ set(CMAKE_CXX_STANDARD 14)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -W -Wall -Wextra")
 
-set(SOURCE_FILES main.cpp VulkanCore/BasicConfiguration.hh VulkanCore/UrcanInstance.cpp VulkanCore/UrcanInstance.hh
-        ClassUtils/ScopeLock.cpp ClassUtils/ScopeLock.hh TestApplication/UrcanApp.cpp TestApplication/UrcanApp.hh VulkanCore/VDeleter.hpp)
+set(SOURCE_FILES main.cpp VulkanCore/BasicConfiguration.hpp VulkanCore/UrcanInstance.cpp VulkanCore/UrcanInstance.hh
+        ClassUtils/ScopeLock.cpp ClassUtils/ScopeLock.hh TestApplication/UrcanApp.cpp TestApplication/UrcanApp.hh VulkanCore/VDeleter.hpp VulkanCore/VCallback.cpp VulkanCore/VCallback.hh)
 add_executable(Vulkan ${SOURCE_FILES})
 
 target_link_libraries(Vulkan glfw3 gdi32 opengl32 vulkan-1 pthread)

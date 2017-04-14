@@ -3,6 +3,10 @@
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
+#ifndef VULKAN_HPP_TYPESAFE_CONVERSION
+# define VULKAN_HPP_TYPESAFE_CONVERSION
+#endif /* VULKAN_HPP_TYPESAFE_CONVERSION */
+
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
 

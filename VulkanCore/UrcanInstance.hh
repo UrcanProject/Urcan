@@ -2,6 +2,12 @@
 // Created by Guillaume on 14/04/2017.
 //
 
+#ifdef NDEBUG
+const bool enableValidationLayers = false;
+#else
+const bool enableValidationLayers = true;
+#endif
+
 #ifndef VULKAN_URCANINSTANCE_HH
 #define VULKAN_URCANINSTANCE_HH
 
@@ -9,30 +15,39 @@
 #include <vulkan/vulkan.hpp>
 #include "VDeleter.hpp"
 #include "ScopeLock.hh"
-#include "BasicConfiguration.hh"
+#include "VCallback.hh"
+#include "BasicConfiguration.hpp"
+
+void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator);
 
 namespace urcan {
 	class UrcanInstance {
 	private:
-		static std::mutex 	_instanceMutex;
-		static bool			_fullyInitialized;
+		static std::mutex _instanceMutex;
+		static bool _fullyInitialized;
 
 	private:
 		VDeleter<vk::Instance, vk::InstanceDeleter> _instance;
+		VCallback _callback;
 
 	private:
 		UrcanInstance();
 		virtual ~UrcanInstance();
-		UrcanInstance(UrcanInstance const &src);
-		UrcanInstance &operator=(UrcanInstance const &src);
+		UrcanInstance(UrcanInstance const& src);
+		UrcanInstance& operator=(UrcanInstance const& src);
 
 	private:
 		void initVulkan();
-		void mainLoop();
+		void createInstance();
+		void setupDebugCallback();
+
+	private:
+		bool checkValidationLayerSupport();
+		std::vector<const char*> getRequiredExtensions();
+
 
 	public:
-		static UrcanInstance &get();
-		void run();
+		static UrcanInstance& get();
 	};
 }
 
