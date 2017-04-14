@@ -2,3 +2,4 @@
 *.out
 cmake-build-debug/
 *.spv
+.idea/
