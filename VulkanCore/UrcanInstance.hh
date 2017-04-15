@@ -21,6 +21,14 @@ const bool enableValidationLayers = true;
 void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator);
 
 namespace urcan {
+	struct QueueFamilyIndices {
+		int graphicsFamily = -1;
+
+		bool isComplete() {
+			return graphicsFamily >= 0;
+		}
+	};
+
 	class UrcanInstance {
 	private:
 		static std::mutex _instanceMutex;
@@ -28,7 +36,11 @@ namespace urcan {
 
 	private:
 		VDeleter<vk::Instance, vk::InstanceDeleter> _instance;
+		VDeleter<vk::Device, vk::DeviceDeleter> _device;
+		VDeleter<vk::SurfaceKHR, vk::SurfaceKHRDeleter> _surface {_instance};
 		VCallback _callback;
+		vk::PhysicalDevice physicalDevice;
+		vk::Queue graphicsQueue;
 
 	private:
 		UrcanInstance();
@@ -40,6 +52,10 @@ namespace urcan {
 		void initVulkan();
 		void createInstance();
 		void setupDebugCallback();
+		void pickPhysicalDevice();
+		bool isDeviceSuitable(vk::PhysicalDevice device);
+		QueueFamilyIndices findQueueFamilies(vk::PhysicalDevice device);
+		void createLogicalDevice();
 
 	private:
 		bool checkValidationLayerSupport();

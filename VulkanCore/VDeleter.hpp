@@ -9,60 +9,6 @@
 #include <memory>
 #include <vulkan/vulkan.hpp>
 
-template <typename T>
-class VDeleterCStyle {
-public:
-	VDeleterCStyle() : VDeleterCStyle([](T, VkAllocationCallbacks*) {}) {}
-
-	VDeleterCStyle(std::function<void(T, VkAllocationCallbacks*)> deletef) {
-		this->deleter = [=](T obj) { deletef(obj, nullptr); };
-	}
-
-	VDeleterCStyle(const VDeleterCStyle<VkDevice>& device, std::function<void(VkDevice, T, VkAllocationCallbacks*)> deletef) {
-		this->deleter = [&device, deletef](T obj) { deletef(device, obj, nullptr); };
-	}
-
-	~VDeleterCStyle() {
-		cleanup();
-	}
-
-	const T* operator &() const {
-		return &object;
-	}
-
-	T* replace() {
-		cleanup();
-		return &object;
-	}
-
-	operator T() const {
-		return object;
-	}
-
-	void operator=(T rhs) {
-		if (rhs != object) {
-			cleanup();
-			object = rhs;
-		}
-	}
-
-	template<typename V>
-	bool operator==(V rhs) {
-		return object == T(rhs);
-	}
-
-private:
-	T object{VK_NULL_HANDLE};
-	std::function<void(T)> deleter;
-
-	void cleanup() {
-		if (object != VK_NULL_HANDLE) {
-			deleter(object);
-		}
-		object = VK_NULL_HANDLE;
-	}
-};
-
 namespace urcan {
 	template<typename T, typename U>
 	class VDeleter {
@@ -99,9 +45,9 @@ namespace urcan {
 			cleanup();
 		}
 
-		void setDelete(VDeleter<vk::Instance, vk::InstanceDeleter> const& instance, std::function<void(VkInstance, T, VkAllocationCallbacks*)> deletef)
+		T& get()
 		{
-			this->deleter = [&instance, deletef](T obj) { deletef(static_cast<VkInstance>(vk::Instance(instance)), obj, nullptr); };
+			return _obj;
 		}
 
 		const T* operator&() const {
@@ -129,13 +75,6 @@ namespace urcan {
 			return _obj == T(rhs);
 		}
 
-		template<typename V>
-		VDeleterCStyle<V> toCStyle()
-		{
-			VDeleterCStyle<V> ret;
-			*(ret.replace()) = static_cast<V>(_obj);
-			return ret;
-		}
 	};
 }
 
