@@ -2,23 +2,23 @@
 // Created by Guillaume on 14/04/2017.
 //
 
-#ifdef NDEBUG
-const bool enableValidationLayers = false;
-#else
-const bool enableValidationLayers = true;
-#endif
-
 #ifndef VULKAN_URCANINSTANCE_HH
 #define VULKAN_URCANINSTANCE_HH
 
+#ifndef NDEBUG
+const bool enableValidationLayers = true;
+#else
+const bool enableValidationLayers = false;
+#endif
+
 #include <memory>
 #include <vulkan/vulkan.hpp>
+#include <GLFW/glfw3.h>
 #include "VDeleter.hpp"
 #include "ScopeLock.hh"
 #include "VCallback.hh"
 #include "BasicConfiguration.hpp"
-
-void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator);
+#include "GLFWCore.hh"
 
 namespace urcan {
 	struct QueueFamilyIndices {
@@ -33,11 +33,12 @@ namespace urcan {
 	private:
 		static std::mutex _instanceMutex;
 		static bool _fullyInitialized;
+		static GLFWCore _glfwCore;
 
 	private:
 		VDeleter<vk::Instance, vk::InstanceDeleter> _instance;
 		VDeleter<vk::Device, vk::DeviceDeleter> _device;
-		VDeleter<vk::SurfaceKHR, vk::SurfaceKHRDeleter> _surface {_instance};
+		VDeleterExtended<vk::SurfaceKHR, vk::SurfaceKHRDeleter, VDeleter<vk::Instance, vk::InstanceDeleter>> _surface {_instance};
 		VCallback _callback;
 		vk::PhysicalDevice physicalDevice;
 		vk::Queue graphicsQueue;
@@ -54,16 +55,17 @@ namespace urcan {
 		void setupDebugCallback();
 		void pickPhysicalDevice();
 		bool isDeviceSuitable(vk::PhysicalDevice device);
-		QueueFamilyIndices findQueueFamilies(vk::PhysicalDevice device);
 		void createLogicalDevice();
+		void createSurface();
 
 	private:
 		bool checkValidationLayerSupport();
 		std::vector<const char*> getRequiredExtensions();
-
+		QueueFamilyIndices findQueueFamilies(vk::PhysicalDevice device);
 
 	public:
-		static UrcanInstance& get();
+		static UrcanInstance* getInstance();
+		static GLFWwindow* getWindow();
 	};
 }
 

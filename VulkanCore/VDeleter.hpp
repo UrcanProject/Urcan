@@ -12,36 +12,22 @@
 namespace urcan {
 	template<typename T, typename U>
 	class VDeleter {
-	private:
-		std::function<void(T)> deleter;
-		U _del;
+	protected:
 		T _obj;
 
-	private:
-		void cleanup() {
+	protected:
+		virtual void cleanup() {
 			if (_obj) {
-				if (deleter)
-					deleter(_obj);
-				else
-					_del(_obj);
+				U del = U();
+				del(_obj);
 			}
 			_obj = nullptr;
 		}
 
 	public:
-		VDeleter() : _obj(nullptr) {
-			this->_del = U(nullptr);
-		}
+		VDeleter() : _obj(nullptr) {}
 
-		VDeleter(VDeleter<vk::Instance, vk::InstanceDeleter> const& instance) : _obj(nullptr) {
-			this->_del = U(instance, nullptr);
-		}
-
-		VDeleter(VDeleter<vk::Device, vk::InstanceDeleter> const& device) : _obj(nullptr) {
-			this->_del = U(device, nullptr);
-		}
-
-		~VDeleter() {
+		virtual ~VDeleter() {
 			cleanup();
 		}
 
@@ -75,6 +61,29 @@ namespace urcan {
 			return _obj == T(rhs);
 		}
 
+	};
+
+	template<typename T, typename U, typename V>
+	class VDeleterExtended : public VDeleter<T, U>
+	{
+	private:
+		V &_delOpt;
+
+	protected:
+		virtual void cleanup() override {
+			if (this->_obj) {
+				U del = U(_delOpt.get(), nullptr);
+				del(this->_obj);
+			}
+			this->_obj = nullptr;
+		}
+
+	public:
+		VDeleterExtended(V& delOpt) : VDeleter<T, U>(), _delOpt(delOpt) {}
+
+		virtual ~VDeleterExtended() {
+			cleanup();
+		}
 	};
 }
 

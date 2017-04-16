@@ -4,11 +4,11 @@
 
 #include <iostream>
 #include <cstring>
-#include <GLFW/glfw3.h>
 #include "UrcanInstance.hh"
 
 std::mutex urcan::UrcanInstance::_instanceMutex;
 bool urcan::UrcanInstance::_fullyInitialized = false;
+urcan::GLFWCore urcan::UrcanInstance::_glfwCore;
 
 urcan::UrcanInstance::UrcanInstance() {
 }
@@ -17,18 +17,24 @@ urcan::UrcanInstance::~UrcanInstance() {
 	_callback.del(static_cast<VkInstance>(vk::Instance(_instance)));
 }
 
-urcan::UrcanInstance& urcan::UrcanInstance::get() {
+urcan::UrcanInstance* urcan::UrcanInstance::getInstance() {
 	static urcan::UrcanInstance instance;
 	ScopeLock lock(_instanceMutex);
 
-	if (!_fullyInitialized)
+	if (!_fullyInitialized) {
 		instance.initVulkan();
-	return instance;
+	}
+	return &instance;
+}
+
+GLFWwindow* urcan::UrcanInstance::getWindow() {
+	return _glfwCore.getWindow();
 }
 
 void urcan::UrcanInstance::initVulkan() {
 	createInstance();
 	setupDebugCallback();
+	createSurface();
 	pickPhysicalDevice();
 	createLogicalDevice();
 }
@@ -170,4 +176,12 @@ void urcan::UrcanInstance::createLogicalDevice() {
 		throw std::runtime_error("failed to create logical device!");
 	}
 	_device.get().getQueue(static_cast<uint32_t>(indices.graphicsFamily), 0, &graphicsQueue);
+}
+
+void urcan::UrcanInstance::createSurface() {
+	VkSurfaceKHR tmpSurface;
+	if (glfwCreateWindowSurface(static_cast<VkInstance>(_instance.get()), _glfwCore.getWindow(), nullptr, &tmpSurface) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create window surface!");
+	}
+	*_surface.replace() = vk::SurfaceKHR(tmpSurface);
 }

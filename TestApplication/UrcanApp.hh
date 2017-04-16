@@ -12,15 +12,12 @@ namespace urcan
 {
 	class UrcanApp {
 	private:
-		UrcanInstance &_context;
+		UrcanInstance* _context;
 		GLFWwindow* _window;
 
 	private:
 		void mainLoop();
-		void initWindow();
-
-	public:
-		static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+		void initApp();
 
 	public:
 		UrcanApp();
