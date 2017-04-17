@@ -5,6 +5,7 @@
 #include <iostream>
 #include <cstring>
 #include <set>
+#include <algorithm>
 #include "UrcanInstance.hh"
 
 std::mutex urcan::UrcanInstance::_instanceMutex;
@@ -42,6 +43,7 @@ void urcan::UrcanInstance::initVulkan() {
 	createSurface();
 	pickPhysicalDevice();
 	createLogicalDevice();
+	createSwapChain();
 }
 
 void urcan::UrcanInstance::createInstance() {
@@ -137,10 +139,16 @@ bool urcan::UrcanInstance::isDeviceSuitable(vk::PhysicalDevice device) {
 
 	bool extensionsSupported = checkDeviceExtensionSupport(device);
 
-	return indices.isComplete() && extensionsSupported;
+	bool swapChainAdequate = false;
+	if (extensionsSupported) {
+		SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
+		swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
+	}
+
+	return indices.isComplete() && extensionsSupported && swapChainAdequate;
 }
 
-urcan::QueueFamilyIndices urcan::UrcanInstance::findQueueFamilies(vk::PhysicalDevice device) {
+urcan::UrcanInstance::QueueFamilyIndices urcan::UrcanInstance::findQueueFamilies(vk::PhysicalDevice device) {
 	QueueFamilyIndices indices;
 
 	uint32_t queueFamilyCount = 0;
@@ -220,4 +228,97 @@ bool urcan::UrcanInstance::checkDeviceExtensionSupport(vk::PhysicalDevice device
 	}
 
 	return requiredExtensions.empty();
+}
+
+urcan::UrcanInstance::SwapChainSupportDetails urcan::UrcanInstance::querySwapChainSupport(vk::PhysicalDevice device) {
+	SwapChainSupportDetails details;
+
+	device.getSurfaceCapabilitiesKHR(_surface, &details.capabilities);
+
+	uint32_t formatCount;
+	device.getSurfaceFormatsKHR(_surface, &formatCount, nullptr);
+
+	if (formatCount != 0) {
+		details.formats.resize(formatCount);
+		device.getSurfaceFormatsKHR(_surface, &formatCount, details.formats.data());
+	}
+
+	uint32_t presentModeCount;
+	device.getSurfacePresentModesKHR(_surface, &presentModeCount, nullptr);
+
+	if (presentModeCount != 0) {
+		details.presentModes.resize(presentModeCount);
+		device.getSurfacePresentModesKHR(_surface, &presentModeCount, details.presentModes.data());
+	}
+	return details;
+}
+
+vk::SurfaceFormatKHR urcan::UrcanInstance::chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats) {
+	if (availableFormats.size() == 1 && availableFormats[0].format == vk::Format::eUndefined) {
+		return {vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear};
+	}
+
+	for (const auto& availableFormat : availableFormats) {
+		if (availableFormat.format == vk::Format::eB8G8R8A8Unorm && availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
+			return availableFormat;
+		}
+	}
+
+	return availableFormats[0];
+}
+
+vk::PresentModeKHR urcan::UrcanInstance::chooseSwapPresentMode(const std::vector<vk::PresentModeKHR> availablePresentModes) {
+	vk::PresentModeKHR bestMode = vk::PresentModeKHR::eFifo;
+
+	for (const auto& availablePresentMode : availablePresentModes) {
+		if (availablePresentMode == vk::PresentModeKHR::eMailbox) {
+			return availablePresentMode;
+		} else if (availablePresentMode == vk::PresentModeKHR::eImmediate) {
+			bestMode = availablePresentMode;
+		}
+	}
+
+	return bestMode;
+}
+
+vk::Extent2D urcan::UrcanInstance::chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities) {
+	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+		return capabilities.currentExtent;
+	} else {
+		vk::Extent2D actualExtent = {WIDTH, HEIGHT};
+
+		actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
+		actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
+
+		return actualExtent;
+	}
+}
+
+void urcan::UrcanInstance::createSwapChain() {
+	SwapChainSupportDetails swapChainSupport = querySwapChainSupport(_physicalDevice);
+
+	vk::SurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
+	vk::PresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
+	vk::Extent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
+	uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
+	if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
+		imageCount = swapChainSupport.capabilities.maxImageCount;
+	}
+
+	vk::SwapchainCreateInfoKHR createInfo = {vk::SwapchainCreateFlagsKHR(), _surface, imageCount, surfaceFormat.format,
+											 surfaceFormat.colorSpace, extent, 1, vk::ImageUsageFlagBits::eColorAttachment,
+											 vk::SharingMode::eExclusive, 0, nullptr, swapChainSupport.capabilities.currentTransform,
+											 vk::CompositeAlphaFlagBitsKHR::eOpaque, presentMode, VK_TRUE, VK_NULL_HANDLE};
+
+	QueueFamilyIndices indices = findQueueFamilies(_physicalDevice);
+	uint32_t queueFamilyIndices[] = {static_cast<uint32_t>(indices.graphicsFamily), static_cast<uint32_t>(indices.presentFamily)};
+	if (indices.graphicsFamily != indices.presentFamily) {
+		createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
+		createInfo.queueFamilyIndexCount = 2;
+		createInfo.pQueueFamilyIndices = queueFamilyIndices;
+	}
+
+	if (_device.get().createSwapchainKHR(&createInfo, nullptr, _swapChain.replace()) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to create swap chain!");
+	}
 }
