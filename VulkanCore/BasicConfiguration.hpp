@@ -6,6 +6,7 @@
 # define VULKAN_BASIC_CONFIGURATION_HPP
 
 #include <vector>
+#include <vulkan/vulkan.hpp>
 
 namespace urcan {
 	const int WIDTH = 800;
@@ -14,6 +15,10 @@ namespace urcan {
 
 const std::vector<const char*> validationLayers = {
 		"VK_LAYER_LUNARG_standard_validation"
+};
+
+const std::vector<const char*> deviceExtensions = {
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 
 template <class T, class U>

@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <cstring>
+#include <set>
 #include "UrcanInstance.hh"
 
 std::mutex urcan::UrcanInstance::_instanceMutex;
@@ -29,6 +30,10 @@ urcan::UrcanInstance* urcan::UrcanInstance::getInstance() {
 
 GLFWwindow* urcan::UrcanInstance::getWindow() {
 	return _glfwCore.getWindow();
+}
+
+GLFWwindow* urcan::UrcanInstance::replaceWindow(GLFWwindow* win) {
+	return _glfwCore.replaceWindow(win);
 }
 
 void urcan::UrcanInstance::initVulkan() {
@@ -117,12 +122,12 @@ void urcan::UrcanInstance::pickPhysicalDevice() {
 	_instance.get().enumeratePhysicalDevices(&deviceCount, devices.data());
 	for (const auto& device : devices) {
 		if (isDeviceSuitable(device)) {
-			physicalDevice = device;
+			_physicalDevice = device;
 			break;
 		}
 	}
 
-	if (physicalDevice == VK_NULL_HANDLE) {
+	if (_physicalDevice == VK_NULL_HANDLE) {
 		throw std::runtime_error("failed to find a suitable GPU!");
 	}
 }
@@ -130,7 +135,9 @@ void urcan::UrcanInstance::pickPhysicalDevice() {
 bool urcan::UrcanInstance::isDeviceSuitable(vk::PhysicalDevice device) {
 	QueueFamilyIndices indices = findQueueFamilies(device);
 
-	return indices.isComplete();
+	bool extensionsSupported = checkDeviceExtensionSupport(device);
+
+	return indices.isComplete() && extensionsSupported;
 }
 
 urcan::QueueFamilyIndices urcan::UrcanInstance::findQueueFamilies(vk::PhysicalDevice device) {
@@ -148,6 +155,13 @@ urcan::QueueFamilyIndices urcan::UrcanInstance::findQueueFamilies(vk::PhysicalDe
 			indices.graphicsFamily = i;
 		}
 
+		vk::Bool32 presentSupport = VK_FALSE;
+		device.getSurfaceSupportKHR(static_cast<uint32_t>(i), _surface, &presentSupport);
+
+		if (queueFamily.queueCount > 0 && presentSupport) {
+			indices.presentFamily = i;
+		}
+
 		if (indices.isComplete()) {
 			break;
 		}
@@ -159,23 +173,29 @@ urcan::QueueFamilyIndices urcan::UrcanInstance::findQueueFamilies(vk::PhysicalDe
 }
 
 void urcan::UrcanInstance::createLogicalDevice() {
-	QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+	QueueFamilyIndices indices = findQueueFamilies(_physicalDevice);
+
+	std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
+	std::set<int> uniqueQueueFamilies = {indices.graphicsFamily, indices.presentFamily};
 
 	float queuePriority = 1.0f;
-	vk::DeviceQueueCreateInfo queueCreateInfo = {vk::DeviceQueueCreateFlagBits(), static_cast<uint32_t>(indices.graphicsFamily), 1, &queuePriority};
-	vk::PhysicalDeviceFeatures deviceFeatures = {};
-	vk::DeviceCreateInfo createInfo = {vk::DeviceCreateFlags(), 1, &queueCreateInfo, 0, nullptr, 0, nullptr, &deviceFeatures};
-	if (enableValidationLayers) {
-
-		createInfo.enabledLayerCount = validationLayers.size();
-		createInfo.ppEnabledLayerNames = validationLayers.data();
-	} else {
-		createInfo.enabledLayerCount = 0;
+	for (int queueFamily : uniqueQueueFamilies) {
+		vk::DeviceQueueCreateInfo queueCreateInfo = {vk::DeviceQueueCreateFlags(), static_cast<uint32_t>(queueFamily), 1, &queuePriority};
+		queueCreateInfos.push_back(queueCreateInfo);
 	}
-	if (physicalDevice.createDevice(&createInfo, nullptr, _device.replace()) != vk::Result::eSuccess) {
+
+	vk::PhysicalDeviceFeatures deviceFeatures = {};
+
+	vk::DeviceCreateInfo createInfo = {vk::DeviceCreateFlags(), static_cast<uint32_t>(queueCreateInfos.size()), queueCreateInfos.data(),
+									   enableValidationLayers ? validationLayers.size() : 0, enableValidationLayers ? validationLayers.data() : nullptr,
+									   deviceExtensions.size(), deviceExtensions.data(), &deviceFeatures};
+
+	if (_physicalDevice.createDevice(&createInfo, nullptr, _device.replace()) != vk::Result::eSuccess) {
 		throw std::runtime_error("failed to create logical device!");
 	}
-	_device.get().getQueue(static_cast<uint32_t>(indices.graphicsFamily), 0, &graphicsQueue);
+
+	_device.get().getQueue(static_cast<uint32_t>(indices.graphicsFamily), 0, &_graphicsQueue);
+	_device.get().getQueue(static_cast<uint32_t>(indices.presentFamily), 0, &_presentQueue);
 }
 
 void urcan::UrcanInstance::createSurface() {
@@ -186,6 +206,18 @@ void urcan::UrcanInstance::createSurface() {
 	*_surface.replace() = vk::SurfaceKHR(tmpSurface);
 }
 
-GLFWwindow* urcan::UrcanInstance::replaceWindow(GLFWwindow* win) {
-	return _glfwCore.replaceWindow(win);
+bool urcan::UrcanInstance::checkDeviceExtensionSupport(vk::PhysicalDevice device) {
+	uint32_t extensionCount;
+	device.enumerateDeviceExtensionProperties(nullptr, &extensionCount, nullptr);
+
+	std::vector<vk::ExtensionProperties> availableExtensions(extensionCount);
+	device.enumerateDeviceExtensionProperties(nullptr, &extensionCount, availableExtensions.data());
+
+	std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
+
+	for (const auto& extension : availableExtensions) {
+		requiredExtensions.erase(extension.extensionName);
+	}
+
+	return requiredExtensions.empty();
 }

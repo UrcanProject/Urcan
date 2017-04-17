@@ -23,9 +23,10 @@ const bool enableValidationLayers = false;
 namespace urcan {
 	struct QueueFamilyIndices {
 		int graphicsFamily = -1;
+		int presentFamily = -1;
 
 		bool isComplete() {
-			return graphicsFamily >= 0;
+			return graphicsFamily >= 0 && presentFamily >= 0;
 		}
 	};
 
@@ -40,8 +41,9 @@ namespace urcan {
 		VDeleter<vk::Device, vk::DeviceDeleter> _device;
 		VDeleterExtended<vk::SurfaceKHR, vk::SurfaceKHRDeleter, VDeleter<vk::Instance, vk::InstanceDeleter>> _surface {_instance};
 		VCallback _callback;
-		vk::PhysicalDevice physicalDevice;
-		vk::Queue graphicsQueue;
+		vk::PhysicalDevice _physicalDevice;
+		vk::Queue _graphicsQueue;
+		vk::Queue _presentQueue;
 
 	private:
 		UrcanInstance();
@@ -62,6 +64,7 @@ namespace urcan {
 		bool checkValidationLayerSupport();
 		std::vector<const char*> getRequiredExtensions();
 		QueueFamilyIndices findQueueFamilies(vk::PhysicalDevice device);
+		bool checkDeviceExtensionSupport(vk::PhysicalDevice device);
 
 	public:
 		static UrcanInstance* getInstance();
