@@ -57,6 +57,7 @@ namespace urcan {
 		std::vector<vk::Image> _swapChainImages;
 		vk::Format _swapChainImageFormat;
 		vk::Extent2D _swapChainExtent;
+		std::vector<VDeleterExtended<vk::ImageView, vk::ImageViewDeleter, VDeleter<vk::Device, vk::DeviceDeleter>>> _swapChainImageViews;
 
 	private:
 		UrcanInstance();
@@ -72,6 +73,7 @@ namespace urcan {
 		void createLogicalDevice();
 		void createSurface();
 		void createSwapChain();
+		void createImageViews();
 
 	private:
 		bool checkValidationLayerSupport();

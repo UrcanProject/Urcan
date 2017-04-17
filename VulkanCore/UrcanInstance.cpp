@@ -44,6 +44,7 @@ void urcan::UrcanInstance::initVulkan() {
 	pickPhysicalDevice();
 	createLogicalDevice();
 	createSwapChain();
+	createImageViews();
 }
 
 void urcan::UrcanInstance::createInstance() {
@@ -327,4 +328,16 @@ void urcan::UrcanInstance::createSwapChain() {
 	_device.get().getSwapchainImagesKHR(_swapChain, &imageCount, _swapChainImages.data());
 	_swapChainImageFormat = surfaceFormat.format;
 	_swapChainExtent = extent;
+}
+
+void urcan::UrcanInstance::createImageViews() {
+	for (uint32_t i = 0; i < _swapChainImages.size(); i++)
+		_swapChainImageViews.push_back(VDeleterExtended<vk::ImageView, vk::ImageViewDeleter, VDeleter<vk::Device, vk::DeviceDeleter>>{_device});
+	for (uint32_t i = 0; i < _swapChainImages.size(); i++) {
+		vk::ImageViewCreateInfo createInfo = {vk::ImageViewCreateFlags(), _swapChainImages[0], vk::ImageViewType::e2D,
+											  _swapChainImageFormat, {}, {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1}};
+		if (_device.get().createImageView(&createInfo, nullptr, _swapChainImageViews[0].replace()) != vk::Result::eSuccess) {
+			throw std::runtime_error("failed to create image views!");
+		}
+	}
 }
