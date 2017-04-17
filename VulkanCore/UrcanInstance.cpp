@@ -321,4 +321,10 @@ void urcan::UrcanInstance::createSwapChain() {
 	if (_device.get().createSwapchainKHR(&createInfo, nullptr, _swapChain.replace()) != vk::Result::eSuccess) {
 		throw std::runtime_error("failed to create swap chain!");
 	}
+
+	_device.get().getSwapchainImagesKHR(_swapChain, &imageCount, nullptr);
+	_swapChainImages.resize(imageCount);
+	_device.get().getSwapchainImagesKHR(_swapChain, &imageCount, _swapChainImages.data());
+	_swapChainImageFormat = surfaceFormat.format;
+	_swapChainExtent = extent;
 }

@@ -55,6 +55,8 @@ namespace urcan {
 
 	private:
 		std::vector<vk::Image> _swapChainImages;
+		vk::Format _swapChainImageFormat;
+		vk::Extent2D _swapChainExtent;
 
 	private:
 		UrcanInstance();
