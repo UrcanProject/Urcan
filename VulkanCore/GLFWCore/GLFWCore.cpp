@@ -30,3 +30,12 @@ GLFWwindow* urcan::GLFWCore::getWindow() {
 	return _window;
 }
 
+void urcan::GLFWCore::setWindow(GLFWwindow* win) {
+	this->_window = win;
+}
+
+GLFWwindow* urcan::GLFWCore::replaceWindow(GLFWwindow* win) {
+	glfwDestroyWindow(_window);
+	this->_window = win;
+	return this->_window;
+}

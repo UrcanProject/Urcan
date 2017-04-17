@@ -185,3 +185,7 @@ void urcan::UrcanInstance::createSurface() {
 	}
 	*_surface.replace() = vk::SurfaceKHR(tmpSurface);
 }
+
+GLFWwindow* urcan::UrcanInstance::replaceWindow(GLFWwindow* win) {
+	return _glfwCore.replaceWindow(win);
+}

@@ -20,6 +20,8 @@ namespace urcan
 
 	public:
 		GLFWwindow* getWindow();
+		void setWindow(GLFWwindow *win);
+		GLFWwindow* replaceWindow(GLFWwindow *win);
 	};
 }
 

@@ -66,6 +66,7 @@ namespace urcan {
 	public:
 		static UrcanInstance* getInstance();
 		static GLFWwindow* getWindow();
+		static GLFWwindow* replaceWindow(GLFWwindow* win);
 	};
 }
 

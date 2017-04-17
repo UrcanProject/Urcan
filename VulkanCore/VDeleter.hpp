@@ -79,6 +79,8 @@ namespace urcan {
 		}
 
 	public:
+		VDeleterExtended() : VDeleter<T, U>(), _delOpt(nullptr) {}
+
 		VDeleterExtended(V& delOpt) : VDeleter<T, U>(), _delOpt(delOpt) {}
 
 		virtual ~VDeleterExtended() {
