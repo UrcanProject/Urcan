@@ -46,6 +46,7 @@ void urcan::UrcanInstance::initVulkan() {
 	createImageViews();
 	createRenderPass();
 	createGraphicsPipeline();
+	createFramebuffers();
 }
 
 void urcan::UrcanInstance::createInstance() {
@@ -350,9 +351,9 @@ void urcan::UrcanInstance::createImageViews() {
 				VDeleterExtended<vk::ImageView, vk::ImageViewDeleter, VDeleter<vk::Device, vk::DeviceDeleter>>{
 						_device});
 	for (uint32_t i = 0; i < _swapChainImages.size(); i++) {
-		vk::ImageViewCreateInfo createInfo = {vk::ImageViewCreateFlags(), _swapChainImages[0], vk::ImageViewType::e2D,
+		vk::ImageViewCreateInfo createInfo = {vk::ImageViewCreateFlags(), _swapChainImages[i], vk::ImageViewType::e2D,
 											  _swapChainImageFormat, {}, {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1}};
-		if (_device.get().createImageView(&createInfo, nullptr, _swapChainImageViews[0].replace()) !=
+		if (_device.get().createImageView(&createInfo, nullptr, _swapChainImageViews[i].replace()) !=
 			vk::Result::eSuccess) {
 			throw std::runtime_error("failed to create image views!");
 		}
@@ -435,5 +436,21 @@ void urcan::UrcanInstance::createRenderPass() {
 	vk::RenderPassCreateInfo renderPassInfo = {vk::RenderPassCreateFlags(), 1, &colorAttachment, 1, &subpass};
 	if (_device.get().createRenderPass(&renderPassInfo, nullptr, _renderPass.replace()) != vk::Result::eSuccess) {
 		throw std::runtime_error("failed to create render pass!");
+	}
+}
+
+void urcan::UrcanInstance::createFramebuffers() {
+	for (size_t i = 0; i < _swapChainImageViews.size(); i++)
+		_swapChainFramebuffers.push_back(VDeleterExtended<vk::Framebuffer, vk::FramebufferDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> {_device});
+	for (size_t i = 0; i < _swapChainImageViews.size(); i++) {
+		vk::ImageView attachments[] = {
+				_swapChainImageViews[i].get()
+		};
+
+		vk::FramebufferCreateInfo framebufferInfo = {vk::FramebufferCreateFlags(), _renderPass, 1, attachments, _swapChainExtent.width, _swapChainExtent.height, 1};
+
+		if (_device.get().createFramebuffer(&framebufferInfo, nullptr, _swapChainFramebuffers[i].replace()) != vk::Result::eSuccess) {
+			throw std::runtime_error("failed to create framebuffer!");
+		}
 	}
 }

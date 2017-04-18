@@ -61,6 +61,7 @@ namespace urcan {
 		vk::Format _swapChainImageFormat;
 		vk::Extent2D _swapChainExtent;
 		std::vector<VDeleterExtended<vk::ImageView, vk::ImageViewDeleter, VDeleter<vk::Device, vk::DeviceDeleter>>> _swapChainImageViews;
+		std::vector<VDeleterExtended<vk::Framebuffer, vk::FramebufferDeleter, VDeleter<vk::Device, vk::DeviceDeleter>>> _swapChainFramebuffers;
 
 	private:
 		UrcanInstance();
@@ -79,6 +80,7 @@ namespace urcan {
 		void createImageViews();
 		void createGraphicsPipeline();
 		void createRenderPass();
+		void createFramebuffers();
 
 	private:
 		bool checkValidationLayerSupport();
