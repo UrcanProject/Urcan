@@ -44,6 +44,7 @@ void urcan::UrcanInstance::initVulkan() {
 	createLogicalDevice();
 	createSwapChain();
 	createImageViews();
+	createRenderPass();
 	createGraphicsPipeline();
 }
 
@@ -260,8 +261,7 @@ urcan::UrcanInstance::SwapChainSupportDetails urcan::UrcanInstance::querySwapCha
 	return details;
 }
 
-vk::SurfaceFormatKHR
-urcan::UrcanInstance::chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR> &availableFormats) {
+vk::SurfaceFormatKHR urcan::UrcanInstance::chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR> &availableFormats) {
 	if (availableFormats.size() == 1 && availableFormats[0].format == vk::Format::eUndefined) {
 		return {vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear};
 	}
@@ -276,8 +276,7 @@ urcan::UrcanInstance::chooseSwapSurfaceFormat(const std::vector<vk::SurfaceForma
 	return availableFormats[0];
 }
 
-vk::PresentModeKHR
-urcan::UrcanInstance::chooseSwapPresentMode(const std::vector<vk::PresentModeKHR> availablePresentModes) {
+vk::PresentModeKHR urcan::UrcanInstance::chooseSwapPresentMode(const std::vector<vk::PresentModeKHR> availablePresentModes) {
 	vk::PresentModeKHR bestMode = vk::PresentModeKHR::eFifo;
 
 	for (const auto &availablePresentMode : availablePresentModes) {
@@ -400,17 +399,16 @@ void urcan::UrcanInstance::createGraphicsPipeline() {
 	vk::PipelineColorBlendStateCreateInfo colorBlending = {vk::PipelineColorBlendStateCreateFlags(), VK_FALSE,
 														   vk::LogicOp::eCopy, 1, &colorBlendAttachment};
 
-	vk::DynamicState dynamicStates[] = {
-			vk::DynamicState::eViewport,
-			vk::DynamicState::eLineWidth
-	};
-
-	vk::PipelineDynamicStateCreateInfo dynamicState = {vk::PipelineDynamicStateCreateFlags(), 2, dynamicStates};
-
 	vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
-
 	if (_device.get().createPipelineLayout(&pipelineLayoutInfo, nullptr, _pipelineLayout.replace()) != vk::Result::eSuccess) {
 		throw std::runtime_error("failed to create pipeline layout!");
+	}
+
+	vk::GraphicsPipelineCreateInfo pipelineInfo = {vk::PipelineCreateFlags(), 2, shaderStages, &vertexInputInfo, &inputAssembly, nullptr, &viewportState, &rasterizer,
+												   &multisampling, nullptr, &colorBlending, nullptr, _pipelineLayout, _renderPass, 0, VK_NULL_HANDLE, -1};
+
+	if (_device.get().createGraphicsPipelines(VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, _graphicsPipeline.replace()) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to create graphics pipeline!");
 	}
 }
 
@@ -424,5 +422,18 @@ void urcan::UrcanInstance::createShaderModule(const std::vector<char> &code,
 
 	if (_device.get().createShaderModule(&createInfo, nullptr, shaderModule.replace()) != vk::Result::eSuccess) {
 		throw std::runtime_error("failed to create shader module!");
+	}
+}
+
+void urcan::UrcanInstance::createRenderPass() {
+	vk::AttachmentDescription colorAttachment = {vk::AttachmentDescriptionFlags(), _swapChainImageFormat, vk::SampleCountFlagBits::e1, vk::AttachmentLoadOp::eClear,
+												 vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare,
+												 vk::ImageLayout::eUndefined, vk::ImageLayout::ePresentSrcKHR};
+	vk::AttachmentReference colorAttachmentRef = {0, vk::ImageLayout::eColorAttachmentOptimal};
+	vk::SubpassDescription subpass = {vk::SubpassDescriptionFlags(), vk::PipelineBindPoint::eGraphics, 0, nullptr, 1, &colorAttachmentRef};
+
+	vk::RenderPassCreateInfo renderPassInfo = {vk::RenderPassCreateFlags(), 1, &colorAttachment, 1, &subpass};
+	if (_device.get().createRenderPass(&renderPassInfo, nullptr, _renderPass.replace()) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to create render pass!");
 	}
 }

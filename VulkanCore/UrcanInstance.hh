@@ -49,6 +49,8 @@ namespace urcan {
 		VDeleterExtended<vk::SurfaceKHR, vk::SurfaceKHRDeleter, VDeleter<vk::Instance, vk::InstanceDeleter>> _surface {_instance};
 		VDeleterExtended<vk::SwapchainKHR, vk::SwapchainKHRDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _swapChain {_device};
 		VDeleterExtended<vk::PipelineLayout, vk::PipelineLayoutDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _pipelineLayout {_device};
+		VDeleterExtended<vk::RenderPass, vk::RenderPassDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _renderPass {_device};
+		VDeleterExtended<vk::Pipeline, vk::PipelineDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _graphicsPipeline {_device};
 		VCallback _callback;
 		vk::PhysicalDevice _physicalDevice;
 		vk::Queue _graphicsQueue;
@@ -76,6 +78,7 @@ namespace urcan {
 		void createSwapChain();
 		void createImageViews();
 		void createGraphicsPipeline();
+		void createRenderPass();
 
 	private:
 		bool checkValidationLayerSupport();
