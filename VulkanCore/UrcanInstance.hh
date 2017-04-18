@@ -48,6 +48,7 @@ namespace urcan {
 		VDeleter<vk::Device, vk::DeviceDeleter> _device;
 		VDeleterExtended<vk::SurfaceKHR, vk::SurfaceKHRDeleter, VDeleter<vk::Instance, vk::InstanceDeleter>> _surface {_instance};
 		VDeleterExtended<vk::SwapchainKHR, vk::SwapchainKHRDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _swapChain {_device};
+		VDeleterExtended<vk::PipelineLayout, vk::PipelineLayoutDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _pipelineLayout {_device};
 		VCallback _callback;
 		vk::PhysicalDevice _physicalDevice;
 		vk::Queue _graphicsQueue;
@@ -74,6 +75,7 @@ namespace urcan {
 		void createSurface();
 		void createSwapChain();
 		void createImageViews();
+		void createGraphicsPipeline();
 
 	private:
 		bool checkValidationLayerSupport();
@@ -89,6 +91,10 @@ namespace urcan {
 		vk::SurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats);
 		vk::PresentModeKHR chooseSwapPresentMode(const std::vector<vk::PresentModeKHR> availablePresentModes);
 		vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities);
+
+	private:
+		void createShaderModule(const std::vector<char>& code, urcan::VDeleterExtended<vk::ShaderModule, vk::ShaderModuleDeleter,
+				VDeleter<vk::Device, vk::DeviceDeleter>>& shaderModule);
 
 	public:
 		static UrcanInstance* getInstance();

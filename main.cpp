@@ -1,5 +1,3 @@
-#define GLFW_INCLUDE_VULKAN
-
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 
@@ -7,12 +5,8 @@
 # define VULKAN_HPP_TYPESAFE_CONVERSION
 #endif /* VULKAN_HPP_TYPESAFE_CONVERSION */
 
-#include <glm/vec4.hpp>
-#include <glm/mat4x4.hpp>
-
 #include <iostream>
 
-#include <vulkan/vulkan.hpp>
 #include "UrcanApp.hh"
 
 int main() {

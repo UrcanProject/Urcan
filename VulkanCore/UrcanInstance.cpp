@@ -7,6 +7,7 @@
 #include <set>
 #include <algorithm>
 #include "UrcanInstance.hh"
+#include "Utils.h"
 
 std::mutex urcan::UrcanInstance::_instanceMutex;
 bool urcan::UrcanInstance::_fullyInitialized = false;
@@ -19,7 +20,7 @@ urcan::UrcanInstance::~UrcanInstance() {
 	_callback.del(static_cast<VkInstance>(vk::Instance(_instance)));
 }
 
-urcan::UrcanInstance* urcan::UrcanInstance::getInstance() {
+urcan::UrcanInstance *urcan::UrcanInstance::getInstance() {
 	static urcan::UrcanInstance instance;
 	ScopeLock lock(_instanceMutex);
 
@@ -29,11 +30,11 @@ urcan::UrcanInstance* urcan::UrcanInstance::getInstance() {
 	return &instance;
 }
 
-GLFWwindow* urcan::UrcanInstance::getWindow() {
+GLFWwindow *urcan::UrcanInstance::getWindow() {
 	return _glfwCore.getWindow();
 }
 
-GLFWwindow* urcan::UrcanInstance::replaceWindow(GLFWwindow* win) {
+GLFWwindow *urcan::UrcanInstance::replaceWindow(GLFWwindow *win) {
 	return _glfwCore.replaceWindow(win);
 }
 
@@ -45,6 +46,7 @@ void urcan::UrcanInstance::initVulkan() {
 	createLogicalDevice();
 	createSwapChain();
 	createImageViews();
+	createGraphicsPipeline();
 }
 
 void urcan::UrcanInstance::createInstance() {
@@ -52,12 +54,14 @@ void urcan::UrcanInstance::createInstance() {
 		throw std::runtime_error("validation layers requested, but not available!");
 	}
 
-	vk::ApplicationInfo appInfo("Hello Triangle", VK_MAKE_VERSION(1, 0, 0), "Urcan", VK_MAKE_VERSION(1, 0, 0), VK_API_VERSION_1_0);
+	vk::ApplicationInfo appInfo("Hello Triangle", VK_MAKE_VERSION(1, 0, 0), "Urcan", VK_MAKE_VERSION(1, 0, 0),
+								VK_API_VERSION_1_0);
 
 	auto extensions = getRequiredExtensions();
 	vk::InstanceCreateFlags createFlags = vk::InstanceCreateFlags();
 	vk::InstanceCreateInfo createInfo(createFlags, &appInfo, enableValidationLayers ? validationLayers.size() : 0,
-									  enableValidationLayers ? validationLayers.data() : nullptr, extensions.size(), extensions.data());
+									  enableValidationLayers ? validationLayers.data() : nullptr, extensions.size(),
+									  extensions.data());
 
 	vk::Result r;
 	if ((r = vk::createInstance(&createInfo, nullptr, _instance.replace())) != vk::Result::eSuccess) {
@@ -73,10 +77,10 @@ bool urcan::UrcanInstance::checkValidationLayerSupport() {
 	std::vector<vk::LayerProperties> availableLayers(layerCount);
 	vk::enumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
-	for (const char* layerName : validationLayers) {
+	for (const char *layerName : validationLayers) {
 		bool layerFound = false;
 
-		for (const auto& layerProperties : availableLayers) {
+		for (const auto &layerProperties : availableLayers) {
 			if (strcmp(layerName, layerProperties.layerName) == 0) {
 				layerFound = true;
 				break;
@@ -91,11 +95,11 @@ bool urcan::UrcanInstance::checkValidationLayerSupport() {
 	return true;
 }
 
-std::vector<const char*> urcan::UrcanInstance::getRequiredExtensions() {
-	std::vector<const char*> extensions;
+std::vector<const char *> urcan::UrcanInstance::getRequiredExtensions() {
+	std::vector<const char *> extensions;
 
 	unsigned int glfwExtensionCount = 0;
-	const char** glfwExtensions;
+	const char **glfwExtensions;
 	glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
 	for (unsigned int i = 0; i < glfwExtensionCount; i++) {
@@ -123,7 +127,7 @@ void urcan::UrcanInstance::pickPhysicalDevice() {
 	}
 	std::vector<vk::PhysicalDevice> devices(deviceCount);
 	_instance.get().enumeratePhysicalDevices(&deviceCount, devices.data());
-	for (const auto& device : devices) {
+	for (const auto &device : devices) {
 		if (isDeviceSuitable(device)) {
 			_physicalDevice = device;
 			break;
@@ -159,7 +163,7 @@ urcan::UrcanInstance::QueueFamilyIndices urcan::UrcanInstance::findQueueFamilies
 	device.getQueueFamilyProperties(&queueFamilyCount, queueFamilies.data());
 
 	int i = 0;
-	for (const auto& queueFamily : queueFamilies) {
+	for (const auto &queueFamily : queueFamilies) {
 		if (queueFamily.queueCount > 0 && queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) {
 			indices.graphicsFamily = i;
 		}
@@ -189,14 +193,17 @@ void urcan::UrcanInstance::createLogicalDevice() {
 
 	float queuePriority = 1.0f;
 	for (int queueFamily : uniqueQueueFamilies) {
-		vk::DeviceQueueCreateInfo queueCreateInfo = {vk::DeviceQueueCreateFlags(), static_cast<uint32_t>(queueFamily), 1, &queuePriority};
+		vk::DeviceQueueCreateInfo queueCreateInfo = {vk::DeviceQueueCreateFlags(), static_cast<uint32_t>(queueFamily),
+													 1, &queuePriority};
 		queueCreateInfos.push_back(queueCreateInfo);
 	}
 
 	vk::PhysicalDeviceFeatures deviceFeatures = {};
 
-	vk::DeviceCreateInfo createInfo = {vk::DeviceCreateFlags(), static_cast<uint32_t>(queueCreateInfos.size()), queueCreateInfos.data(),
-									   enableValidationLayers ? validationLayers.size() : 0, enableValidationLayers ? validationLayers.data() : nullptr,
+	vk::DeviceCreateInfo createInfo = {vk::DeviceCreateFlags(), static_cast<uint32_t>(queueCreateInfos.size()),
+									   queueCreateInfos.data(),
+									   enableValidationLayers ? validationLayers.size() : 0,
+									   enableValidationLayers ? validationLayers.data() : nullptr,
 									   deviceExtensions.size(), deviceExtensions.data(), &deviceFeatures};
 
 	if (_physicalDevice.createDevice(&createInfo, nullptr, _device.replace()) != vk::Result::eSuccess) {
@@ -209,7 +216,8 @@ void urcan::UrcanInstance::createLogicalDevice() {
 
 void urcan::UrcanInstance::createSurface() {
 	VkSurfaceKHR tmpSurface;
-	if (glfwCreateWindowSurface(static_cast<VkInstance>(_instance.get()), _glfwCore.getWindow(), nullptr, &tmpSurface) != VK_SUCCESS) {
+	if (glfwCreateWindowSurface(static_cast<VkInstance>(_instance.get()), _glfwCore.getWindow(), nullptr,
+								&tmpSurface) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create window surface!");
 	}
 	*_surface.replace() = vk::SurfaceKHR(tmpSurface);
@@ -224,7 +232,7 @@ bool urcan::UrcanInstance::checkDeviceExtensionSupport(vk::PhysicalDevice device
 
 	std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
 
-	for (const auto& extension : availableExtensions) {
+	for (const auto &extension : availableExtensions) {
 		requiredExtensions.erase(extension.extensionName);
 	}
 
@@ -254,13 +262,15 @@ urcan::UrcanInstance::SwapChainSupportDetails urcan::UrcanInstance::querySwapCha
 	return details;
 }
 
-vk::SurfaceFormatKHR urcan::UrcanInstance::chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats) {
+vk::SurfaceFormatKHR
+urcan::UrcanInstance::chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR> &availableFormats) {
 	if (availableFormats.size() == 1 && availableFormats[0].format == vk::Format::eUndefined) {
 		return {vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear};
 	}
 
-	for (const auto& availableFormat : availableFormats) {
-		if (availableFormat.format == vk::Format::eB8G8R8A8Unorm && availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
+	for (const auto &availableFormat : availableFormats) {
+		if (availableFormat.format == vk::Format::eB8G8R8A8Unorm &&
+			availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
 			return availableFormat;
 		}
 	}
@@ -268,10 +278,11 @@ vk::SurfaceFormatKHR urcan::UrcanInstance::chooseSwapSurfaceFormat(const std::ve
 	return availableFormats[0];
 }
 
-vk::PresentModeKHR urcan::UrcanInstance::chooseSwapPresentMode(const std::vector<vk::PresentModeKHR> availablePresentModes) {
+vk::PresentModeKHR
+urcan::UrcanInstance::chooseSwapPresentMode(const std::vector<vk::PresentModeKHR> availablePresentModes) {
 	vk::PresentModeKHR bestMode = vk::PresentModeKHR::eFifo;
 
-	for (const auto& availablePresentMode : availablePresentModes) {
+	for (const auto &availablePresentMode : availablePresentModes) {
 		if (availablePresentMode == vk::PresentModeKHR::eMailbox) {
 			return availablePresentMode;
 		} else if (availablePresentMode == vk::PresentModeKHR::eImmediate) {
@@ -282,14 +293,16 @@ vk::PresentModeKHR urcan::UrcanInstance::chooseSwapPresentMode(const std::vector
 	return bestMode;
 }
 
-vk::Extent2D urcan::UrcanInstance::chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities) {
+vk::Extent2D urcan::UrcanInstance::chooseSwapExtent(const vk::SurfaceCapabilitiesKHR &capabilities) {
 	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
 		return capabilities.currentExtent;
 	} else {
 		vk::Extent2D actualExtent = {WIDTH, HEIGHT};
 
-		actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
-		actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
+		actualExtent.width = std::max(capabilities.minImageExtent.width,
+									  std::min(capabilities.maxImageExtent.width, actualExtent.width));
+		actualExtent.height = std::max(capabilities.minImageExtent.height,
+									   std::min(capabilities.maxImageExtent.height, actualExtent.height));
 
 		return actualExtent;
 	}
@@ -307,12 +320,16 @@ void urcan::UrcanInstance::createSwapChain() {
 	}
 
 	vk::SwapchainCreateInfoKHR createInfo = {vk::SwapchainCreateFlagsKHR(), _surface, imageCount, surfaceFormat.format,
-											 surfaceFormat.colorSpace, extent, 1, vk::ImageUsageFlagBits::eColorAttachment,
-											 vk::SharingMode::eExclusive, 0, nullptr, swapChainSupport.capabilities.currentTransform,
-											 vk::CompositeAlphaFlagBitsKHR::eOpaque, presentMode, VK_TRUE, VK_NULL_HANDLE};
+											 surfaceFormat.colorSpace, extent, 1,
+											 vk::ImageUsageFlagBits::eColorAttachment,
+											 vk::SharingMode::eExclusive, 0, nullptr,
+											 swapChainSupport.capabilities.currentTransform,
+											 vk::CompositeAlphaFlagBitsKHR::eOpaque, presentMode, VK_TRUE,
+											 VK_NULL_HANDLE};
 
 	QueueFamilyIndices indices = findQueueFamilies(_physicalDevice);
-	uint32_t queueFamilyIndices[] = {static_cast<uint32_t>(indices.graphicsFamily), static_cast<uint32_t>(indices.presentFamily)};
+	uint32_t queueFamilyIndices[] = {static_cast<uint32_t>(indices.graphicsFamily),
+									 static_cast<uint32_t>(indices.presentFamily)};
 	if (indices.graphicsFamily != indices.presentFamily) {
 		createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
 		createInfo.queueFamilyIndexCount = 2;
@@ -332,12 +349,82 @@ void urcan::UrcanInstance::createSwapChain() {
 
 void urcan::UrcanInstance::createImageViews() {
 	for (uint32_t i = 0; i < _swapChainImages.size(); i++)
-		_swapChainImageViews.push_back(VDeleterExtended<vk::ImageView, vk::ImageViewDeleter, VDeleter<vk::Device, vk::DeviceDeleter>>{_device});
+		_swapChainImageViews.push_back(
+				VDeleterExtended<vk::ImageView, vk::ImageViewDeleter, VDeleter<vk::Device, vk::DeviceDeleter>>{
+						_device});
 	for (uint32_t i = 0; i < _swapChainImages.size(); i++) {
 		vk::ImageViewCreateInfo createInfo = {vk::ImageViewCreateFlags(), _swapChainImages[0], vk::ImageViewType::e2D,
 											  _swapChainImageFormat, {}, {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1}};
-		if (_device.get().createImageView(&createInfo, nullptr, _swapChainImageViews[0].replace()) != vk::Result::eSuccess) {
+		if (_device.get().createImageView(&createInfo, nullptr, _swapChainImageViews[0].replace()) !=
+			vk::Result::eSuccess) {
 			throw std::runtime_error("failed to create image views!");
 		}
+	}
+}
+
+void urcan::UrcanInstance::createGraphicsPipeline() {
+	VDeleterExtended<vk::ShaderModule, vk::ShaderModuleDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> vertShaderModule{_device};
+	VDeleterExtended<vk::ShaderModule, vk::ShaderModuleDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> fragShaderModule{_device};
+
+	auto vertShaderCode = urcan::utils::readFile("../shaders/vert.spv");
+	auto fragShaderCode = urcan::utils::readFile("../shaders/frag.spv");
+
+	createShaderModule(vertShaderCode, vertShaderModule);
+	createShaderModule(fragShaderCode, fragShaderModule);
+
+	vk::PipelineShaderStageCreateInfo vertShaderStageInfo = {vk::PipelineShaderStageCreateFlags(),
+															 vk::ShaderStageFlagBits::eVertex,
+															 vertShaderModule, "main"};
+	vk::PipelineShaderStageCreateInfo fragShaderStageInfo = {vk::PipelineShaderStageCreateFlags(),
+															 vk::ShaderStageFlagBits::eFragment,
+															 fragShaderModule, "main"};
+	vk::PipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
+
+	vk::PipelineVertexInputStateCreateInfo vertexInputInfo; //Basic constructor works well here
+	vk::PipelineInputAssemblyStateCreateInfo inputAssembly = {vk::PipelineInputAssemblyStateCreateFlags(),
+															  vk::PrimitiveTopology::eTriangleList, VK_FALSE};
+
+	vk::Viewport viewport = {0.0f, 0.0f, static_cast<float>( _swapChainExtent.width),
+							 static_cast<float>( _swapChainExtent.height), 0.0f, 1.0f};
+	vk::Rect2D scissor = {{0, 0}, _swapChainExtent};
+	vk::PipelineViewportStateCreateInfo viewportState = {vk::PipelineViewportStateCreateFlags(), 1, &viewport, 1, &scissor};
+
+	vk::PipelineRasterizationStateCreateInfo rasterizer = {vk::PipelineRasterizationStateCreateFlags(), VK_FALSE,
+														   VK_FALSE, vk::PolygonMode::eFill, vk::CullModeFlagBits::eBack,
+														   vk::FrontFace::eClockwise, VK_FALSE, 0, 0, 0, 1.0};
+
+	vk::PipelineMultisampleStateCreateInfo multisampling = {vk::PipelineMultisampleStateCreateFlags(), vk::SampleCountFlagBits::e1,
+															VK_FALSE, 1.0f, nullptr, VK_FALSE, VK_FALSE};
+
+	vk::PipelineColorBlendAttachmentState colorBlendAttachment = {VK_FALSE};
+	colorBlendAttachment.colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
+										  vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
+	vk::PipelineColorBlendStateCreateInfo colorBlending = {vk::PipelineColorBlendStateCreateFlags(), VK_FALSE,
+														   vk::LogicOp::eCopy, 1, &colorBlendAttachment};
+
+	vk::DynamicState dynamicStates[] = {
+			vk::DynamicState::eViewport,
+			vk::DynamicState::eLineWidth
+	};
+
+	vk::PipelineDynamicStateCreateInfo dynamicState = {vk::PipelineDynamicStateCreateFlags(), 2, dynamicStates};
+
+	vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
+
+	if (_device.get().createPipelineLayout(&pipelineLayoutInfo, nullptr, _pipelineLayout.replace()) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to create pipeline layout!");
+	}
+}
+
+void urcan::UrcanInstance::createShaderModule(const std::vector<char> &code,
+											  urcan::VDeleterExtended<vk::ShaderModule, vk::ShaderModuleDeleter,
+													  VDeleter<vk::Device, vk::DeviceDeleter>> &shaderModule) {
+
+	std::vector<uint32_t> codeAligned(code.size() / sizeof(uint32_t) + 1);
+	memcpy(codeAligned.data(), code.data(), code.size());
+	vk::ShaderModuleCreateInfo createInfo = {vk::ShaderModuleCreateFlags(), code.size(), codeAligned.data()};
+
+	if (_device.get().createShaderModule(&createInfo, nullptr, shaderModule.replace()) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to create shader module!");
 	}
 }
