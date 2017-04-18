@@ -51,6 +51,10 @@ namespace urcan {
 		VDeleterExtended<vk::PipelineLayout, vk::PipelineLayoutDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _pipelineLayout {_device};
 		VDeleterExtended<vk::RenderPass, vk::RenderPassDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _renderPass {_device};
 		VDeleterExtended<vk::Pipeline, vk::PipelineDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _graphicsPipeline {_device};
+		VDeleterExtended<vk::CommandPool, vk::CommandPoolDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _commandPool {_device};
+		VDeleterExtended<vk::Semaphore, vk::SemaphoreDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _imageAvailableSemaphore {_device};
+		VDeleterExtended<vk::Semaphore, vk::SemaphoreDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _renderFinishedSemaphore {_device};
+		std::vector<vk::CommandBuffer> _commandBuffers;
 		VCallback _callback;
 		vk::PhysicalDevice _physicalDevice;
 		vk::Queue _graphicsQueue;
@@ -81,6 +85,9 @@ namespace urcan {
 		void createGraphicsPipeline();
 		void createRenderPass();
 		void createFramebuffers();
+		void createCommandPool();
+		void createCommandBuffers();
+		void createSemaphores();
 
 	private:
 		bool checkValidationLayerSupport();
@@ -100,6 +107,10 @@ namespace urcan {
 	private:
 		void createShaderModule(const std::vector<char>& code, urcan::VDeleterExtended<vk::ShaderModule, vk::ShaderModuleDeleter,
 				VDeleter<vk::Device, vk::DeviceDeleter>>& shaderModule);
+
+	public:
+		void drawFrame();
+		void waitIdle();
 
 	public:
 		static UrcanInstance* getInstance();

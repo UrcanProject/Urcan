@@ -15,7 +15,9 @@ urcan::UrcanApp::~UrcanApp() {
 void urcan::UrcanApp::mainLoop() {
 	while (!glfwWindowShouldClose(_window)) {
 		glfwPollEvents();
+		_context->drawFrame();
 	}
+	_context->waitIdle();
 }
 
 void urcan::UrcanApp::run() {

@@ -47,6 +47,9 @@ void urcan::UrcanInstance::initVulkan() {
 	createRenderPass();
 	createGraphicsPipeline();
 	createFramebuffers();
+	createCommandPool();
+	createCommandBuffers();
+	createSemaphores();
 }
 
 void urcan::UrcanInstance::createInstance() {
@@ -433,7 +436,10 @@ void urcan::UrcanInstance::createRenderPass() {
 	vk::AttachmentReference colorAttachmentRef = {0, vk::ImageLayout::eColorAttachmentOptimal};
 	vk::SubpassDescription subpass = {vk::SubpassDescriptionFlags(), vk::PipelineBindPoint::eGraphics, 0, nullptr, 1, &colorAttachmentRef};
 
-	vk::RenderPassCreateInfo renderPassInfo = {vk::RenderPassCreateFlags(), 1, &colorAttachment, 1, &subpass};
+	vk::SubpassDependency dependency = {VK_SUBPASS_EXTERNAL, 0, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eColorAttachmentOutput,
+										vk::AccessFlags(), vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite};
+
+	vk::RenderPassCreateInfo renderPassInfo = {vk::RenderPassCreateFlags(), 1, &colorAttachment, 1, &subpass, 1, &dependency};
 	if (_device.get().createRenderPass(&renderPassInfo, nullptr, _renderPass.replace()) != vk::Result::eSuccess) {
 		throw std::runtime_error("failed to create render pass!");
 	}
@@ -453,4 +459,67 @@ void urcan::UrcanInstance::createFramebuffers() {
 			throw std::runtime_error("failed to create framebuffer!");
 		}
 	}
+}
+
+void urcan::UrcanInstance::createCommandPool() {
+	QueueFamilyIndices queueFamilyIndices = findQueueFamilies(_physicalDevice);
+
+	vk::CommandPoolCreateInfo poolInfo = {vk::CommandPoolCreateFlags(), static_cast<uint32_t>(queueFamilyIndices.graphicsFamily)};
+	if (_device.get().createCommandPool(&poolInfo, nullptr, _commandPool.replace()) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to create command pool!");
+	}
+}
+
+void urcan::UrcanInstance::createCommandBuffers() {
+	_commandBuffers.resize(_swapChainFramebuffers.size());
+	vk::CommandBufferAllocateInfo allocInfo = {_commandPool, vk::CommandBufferLevel::ePrimary, static_cast<uint32_t>(_commandBuffers.size())};
+
+	if (_device.get().allocateCommandBuffers(&allocInfo, _commandBuffers.data()) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to allocate command buffers!");
+	}
+
+	for (size_t i = 0; i < _commandBuffers.size(); i++) {
+		vk::CommandBufferBeginInfo beginInfo = {vk::CommandBufferUsageFlagBits::eSimultaneousUse, nullptr};
+		_commandBuffers[i].begin(&beginInfo);
+
+		const std::array<float, 4> clearColorTmp {0.0f, 0.0f, 0.0f, 1.0f};
+		vk::ClearValue clearColor (clearColorTmp);
+		vk::RenderPassBeginInfo renderPassInfo = {_renderPass, _swapChainFramebuffers[i], {{0, 0}, _swapChainExtent}, 1, &clearColor};
+		_commandBuffers[i].beginRenderPass(&renderPassInfo, vk::SubpassContents::eInline);
+		_commandBuffers[i].bindPipeline(vk::PipelineBindPoint::eGraphics, _graphicsPipeline);
+		_commandBuffers[i].draw(3, 1, 0, 0);
+		_commandBuffers[i].endRenderPass();
+		_commandBuffers[i].end();
+	}
+}
+
+void urcan::UrcanInstance::createSemaphores() {
+	vk::SemaphoreCreateInfo semaphoreInfo = {};
+	if (_device.get().createSemaphore(&semaphoreInfo, nullptr, _imageAvailableSemaphore.replace()) != vk::Result::eSuccess ||
+		_device.get().createSemaphore(&semaphoreInfo, nullptr, _renderFinishedSemaphore.replace()) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to create semaphores!");
+	}
+}
+
+void urcan::UrcanInstance::drawFrame() {
+	uint32_t imageIndex;
+	_device.get().acquireNextImageKHR(_swapChain, std::numeric_limits<uint64_t>::max(), _imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+
+
+	vk::Semaphore waitSemaphores[] = {_imageAvailableSemaphore};
+	vk::PipelineStageFlags waitStages[] = {vk::PipelineStageFlagBits::eColorAttachmentOutput};
+	vk::Semaphore signalSemaphores[] = {_renderFinishedSemaphore};
+
+	vk::SubmitInfo submitInfo = {1, waitSemaphores, waitStages, 1, &_commandBuffers[imageIndex], 1, signalSemaphores};
+	if (_graphicsQueue.submit(1, &submitInfo, VK_NULL_HANDLE) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to submit draw command buffer!");
+	}
+
+	vk::SwapchainKHR swapChains[] = {_swapChain};
+	vk::PresentInfoKHR presentInfo = {1, signalSemaphores, 1, swapChains, &imageIndex};
+	_presentQueue.presentKHR(&presentInfo);
+}
+
+void urcan::UrcanInstance::waitIdle() {
+	_device.get().waitIdle();
 }
