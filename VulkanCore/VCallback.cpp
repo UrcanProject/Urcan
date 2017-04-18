@@ -21,9 +21,10 @@ void DestroyDebugReportCallbackEXT(VkInstance instance, vk::DebugReportCallbackE
 	}
 }
 
-urcan::VCallback::VCallback(){}
+urcan::VCallback::VCallback(VDeleter<vk::Instance, vk::InstanceDeleter>& instance) : _instance(instance) {}
 
 urcan::VCallback::~VCallback() {
+	DestroyDebugReportCallbackEXT(static_cast<VkInstance>(_instance.get()), _callback, nullptr);
 }
 
 vk::DebugReportCallbackEXT& urcan::VCallback::getCallback() {
@@ -37,17 +38,13 @@ VkBool32 VKAPI_CALL urcan::VCallback::debugCallback(VkDebugReportFlagsEXT , VkDe
 	return VK_FALSE;
 }
 
-void urcan::VCallback::del(VkInstance instance) {
-	DestroyDebugReportCallbackEXT(instance, _callback, nullptr);
-}
-
-void urcan::VCallback::init(VkInstance instance) {
+void urcan::VCallback::init() {
 	if (!enableValidationLayers)
 		return;
 	vk::DebugReportCallbackCreateInfoEXT createInfo(vk::DebugReportFlagBitsEXT::eWarning | vk::DebugReportFlagBitsEXT::eError , debugCallback);
 	VkDebugReportCallbackCreateInfoEXT tmpInfo = static_cast<VkDebugReportCallbackCreateInfoEXT>(createInfo);
 	VkDebugReportCallbackEXT tmpCall;
-	if (CreateDebugReportCallbackEXT(instance, &tmpInfo, nullptr, &tmpCall) != VK_SUCCESS) {
+	if (CreateDebugReportCallbackEXT(static_cast<VkInstance>(_instance.get()), &tmpInfo, nullptr, &tmpCall) != VK_SUCCESS) {
 		throw std::runtime_error("failed to set up debug callback!");
 	}
 	_callback = vk::DebugReportCallbackEXT(tmpCall);

@@ -12,15 +12,15 @@ namespace urcan {
 	class VCallback {
 	private:
 		vk::DebugReportCallbackEXT _callback;
+		VDeleter<vk::Instance, vk::InstanceDeleter>& _instance;
 
 	public:
-		VCallback();
+		VCallback(VDeleter<vk::Instance, vk::InstanceDeleter>& instance);
 		virtual ~VCallback();
 
 	public:
 		vk::DebugReportCallbackEXT& getCallback() ;
-		void init(VkInstance instance);
-		void del(VkInstance instance);
+		void init();
 		static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj,
 															size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData);
 	};

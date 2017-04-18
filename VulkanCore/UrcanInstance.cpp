@@ -13,12 +13,10 @@ std::mutex urcan::UrcanInstance::_instanceMutex;
 bool urcan::UrcanInstance::_fullyInitialized = false;
 urcan::GLFWCore urcan::UrcanInstance::_glfwCore;
 
-urcan::UrcanInstance::UrcanInstance() {
+urcan::UrcanInstance::UrcanInstance() : _callback(_instance) {
 }
 
-urcan::UrcanInstance::~UrcanInstance() {
-	_callback.del(static_cast<VkInstance>(vk::Instance(_instance)));
-}
+urcan::UrcanInstance::~UrcanInstance() {}
 
 urcan::UrcanInstance *urcan::UrcanInstance::getInstance() {
 	static urcan::UrcanInstance instance;
@@ -116,7 +114,7 @@ std::vector<const char *> urcan::UrcanInstance::getRequiredExtensions() {
 void urcan::UrcanInstance::setupDebugCallback() {
 	if (!enableValidationLayers)
 		return;
-	this->_callback.init(static_cast<VkInstance>(vk::Instance(_instance)));
+	this->_callback.init();
 }
 
 void urcan::UrcanInstance::pickPhysicalDevice() {
