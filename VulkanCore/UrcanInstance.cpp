@@ -16,16 +16,18 @@ urcan::GLFWCore urcan::UrcanInstance::_glfwCore;
 urcan::UrcanInstance::UrcanInstance() : _callback(_instance) {
 }
 
-urcan::UrcanInstance::~UrcanInstance() {}
+urcan::UrcanInstance::~UrcanInstance() {
+	this->_fullyInitialized = false;
+}
 
-urcan::UrcanInstance *urcan::UrcanInstance::getInstance() {
-	static urcan::UrcanInstance instance;
-	ScopeLock lock(_instanceMutex);
-
+urcan::UrcanInstance *urcan::UrcanInstance::getOrCreateInstance() {
 	if (!_fullyInitialized) {
-		instance.initVulkan();
+		ScopeLock lock(_instanceMutex);
+		if (!_fullyInitialized) {
+			getInstance()->initVulkan();
+		}
 	}
-	return &instance;
+	return getInstance();
 }
 
 GLFWwindow *urcan::UrcanInstance::getWindow() {
@@ -50,6 +52,7 @@ void urcan::UrcanInstance::initVulkan() {
 	createCommandPool();
 	createCommandBuffers();
 	createSemaphores();
+	//_fullyInitialized = true;
 }
 
 void urcan::UrcanInstance::createInstance() {
@@ -286,7 +289,8 @@ vk::PresentModeKHR urcan::UrcanInstance::chooseSwapPresentMode(const std::vector
 	for (const auto &availablePresentMode : availablePresentModes) {
 		if (availablePresentMode == vk::PresentModeKHR::eMailbox) {
 			return availablePresentMode;
-		} else if (availablePresentMode == vk::PresentModeKHR::eImmediate) {
+		}
+		if (availablePresentMode == vk::PresentModeKHR::eImmediate) {
 			bestMode = availablePresentMode;
 		}
 	}

@@ -27,6 +27,6 @@ void urcan::UrcanApp::run() {
 
 void urcan::UrcanApp::initApp() {
 	//_window = urcan::UrcanInstance::replaceWindow(glfwCreateWindow(WIDTH, HEIGHT, "Vulkan 2", nullptr, nullptr));// => this works to change the window !
-	_context = urcan::UrcanInstance::getInstance();
+	_context = urcan::UrcanInstance::getOrCreateInstance();
 	_window = urcan::UrcanInstance::getWindow();
 }

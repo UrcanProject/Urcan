@@ -14,6 +14,7 @@ const bool enableValidationLayers = false;
 #include <memory>
 #include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
+#include "Singleton.hpp"
 #include "VDeleter.hpp"
 #include "ScopeLock.hh"
 #include "VCallback.hh"
@@ -21,7 +22,9 @@ const bool enableValidationLayers = false;
 #include "GLFWCore.hh"
 
 namespace urcan {
-	class UrcanInstance {
+	class UrcanInstance : public Singleton<UrcanInstance> {
+		friend class Singleton<UrcanInstance>;
+
 	private:
 		struct QueueFamilyIndices {
 			int graphicsFamily = -1;
@@ -67,9 +70,11 @@ namespace urcan {
 		std::vector<VDeleterExtended<vk::ImageView, vk::ImageViewDeleter, VDeleter<vk::Device, vk::DeviceDeleter>>> _swapChainImageViews;
 		std::vector<VDeleterExtended<vk::Framebuffer, vk::FramebufferDeleter, VDeleter<vk::Device, vk::DeviceDeleter>>> _swapChainFramebuffers;
 
+	protected:
+		virtual ~UrcanInstance();
+
 	private:
 		UrcanInstance();
-		virtual ~UrcanInstance();
 		UrcanInstance(UrcanInstance const& src);
 		UrcanInstance& operator=(UrcanInstance const& src);
 
@@ -113,7 +118,7 @@ namespace urcan {
 		void waitIdle();
 
 	public:
-		static UrcanInstance* getInstance();
+		static UrcanInstance* getOrCreateInstance();
 		static GLFWwindow* getWindow();
 		static GLFWwindow* replaceWindow(GLFWwindow* win);
 	};
