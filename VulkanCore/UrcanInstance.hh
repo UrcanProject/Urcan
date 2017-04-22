@@ -48,27 +48,31 @@ namespace urcan {
 
 	private:
 		VDeleter<vk::Instance, vk::InstanceDeleter> _instance;
-		VDeleter<vk::Device, vk::DeviceDeleter> _device;
-		VDeleterExtended<vk::SurfaceKHR, vk::SurfaceKHRDeleter, VDeleter<vk::Instance, vk::InstanceDeleter>> _surface {_instance};
-		VDeleterExtended<vk::SwapchainKHR, vk::SwapchainKHRDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _swapChain {_device};
-		VDeleterExtended<vk::PipelineLayout, vk::PipelineLayoutDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _pipelineLayout {_device};
-		VDeleterExtended<vk::RenderPass, vk::RenderPassDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _renderPass {_device};
-		VDeleterExtended<vk::Pipeline, vk::PipelineDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _graphicsPipeline {_device};
-		VDeleterExtended<vk::CommandPool, vk::CommandPoolDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _commandPool {_device};
-		VDeleterExtended<vk::Semaphore, vk::SemaphoreDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _imageAvailableSemaphore {_device};
-		VDeleterExtended<vk::Semaphore, vk::SemaphoreDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _renderFinishedSemaphore {_device};
-		std::vector<vk::CommandBuffer> _commandBuffers;
 		VCallback _callback;
+		VDeleterExtended<vk::SurfaceKHR, vk::SurfaceKHRDeleter, VDeleter<vk::Instance, vk::InstanceDeleter>> _surface {_instance};
+
 		vk::PhysicalDevice _physicalDevice;
+		VDeleter<vk::Device, vk::DeviceDeleter> _device;
+
 		vk::Queue _graphicsQueue;
 		vk::Queue _presentQueue;
 
-	private:
+		VDeleterExtended<vk::SwapchainKHR, vk::SwapchainKHRDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _swapChain {_device};
 		std::vector<vk::Image> _swapChainImages;
 		vk::Format _swapChainImageFormat;
 		vk::Extent2D _swapChainExtent;
 		std::vector<VDeleterExtended<vk::ImageView, vk::ImageViewDeleter, VDeleter<vk::Device, vk::DeviceDeleter>>> _swapChainImageViews;
 		std::vector<VDeleterExtended<vk::Framebuffer, vk::FramebufferDeleter, VDeleter<vk::Device, vk::DeviceDeleter>>> _swapChainFramebuffers;
+
+		VDeleterExtended<vk::RenderPass, vk::RenderPassDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _renderPass {_device};
+		VDeleterExtended<vk::PipelineLayout, vk::PipelineLayoutDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _pipelineLayout {_device};
+		VDeleterExtended<vk::Pipeline, vk::PipelineDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _graphicsPipeline {_device};
+
+		VDeleterExtended<vk::CommandPool, vk::CommandPoolDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _commandPool {_device};
+		std::vector<vk::CommandBuffer> _commandBuffers;
+
+		VDeleterExtended<vk::Semaphore, vk::SemaphoreDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _imageAvailableSemaphore {_device};
+		VDeleterExtended<vk::Semaphore, vk::SemaphoreDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _renderFinishedSemaphore {_device};
 
 	protected:
 		virtual ~UrcanInstance();
