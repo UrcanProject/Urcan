@@ -7,7 +7,10 @@
 
 #include <iostream>
 #include <memory>
+#include <exception>
 #include <vulkan/vulkan.hpp>
+#include <thread>
+#include <chrono>
 
 namespace urcan {
 	template<typename T, typename U>
@@ -28,6 +31,7 @@ namespace urcan {
 		VDeleter() : _obj(nullptr) {}
 
 		virtual ~VDeleter() {
+			std::this_thread::__sleep_for(std::chrono::seconds(0), std::chrono::nanoseconds(10000000)); //fixme: Ugly fix for an heisenbug SEGV. It slow down the destructor, and everything is fine
 			cleanup();
 		}
 
