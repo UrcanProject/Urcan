@@ -17,9 +17,7 @@ void urcan::UrcanApp::mainLoop() {
 		glfwPollEvents();
 		_context->drawFrame();
 	}
-	std::cout << "End of the main loop" << std::endl;
 	_context->waitIdle();
-	std::cout << "Everything returned" << std::endl;
 }
 
 void urcan::UrcanApp::run() {
