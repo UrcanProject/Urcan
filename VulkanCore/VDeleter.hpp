@@ -20,6 +20,7 @@ namespace urcan {
 
 	protected:
 		virtual void cleanup() {
+			//std::this_thread::__sleep_for(std::chrono::seconds(0), std::chrono::nanoseconds(10000000));//fixme: Ugly fix for an heisenbug SEGV. It slow down the destructor, and everything is fine
 			if (_obj) {
 				U del = U();
 				del(_obj);
@@ -31,7 +32,6 @@ namespace urcan {
 		VDeleter() : _obj(nullptr) {}
 
 		virtual ~VDeleter() {
-			std::this_thread::__sleep_for(std::chrono::seconds(0), std::chrono::nanoseconds(10000000)); //fixme: Ugly fix for an heisenbug SEGV. It slow down the destructor, and everything is fine
 			cleanup();
 		}
 
@@ -53,7 +53,7 @@ namespace urcan {
 			return _obj;
 		}
 
-		void operator=(T rhs) {
+		virtual void operator=(T rhs) {
 			if (rhs != _obj) {
 				cleanup();
 				_obj = rhs;
@@ -89,6 +89,13 @@ namespace urcan {
 
 		virtual ~VDeleterExtended() {
 			cleanup();
+		}
+
+		void operator=(T rhs) {
+			if (rhs != this->_obj) {
+				cleanup();
+				this->_obj = rhs;
+			}
 		}
 	};
 }

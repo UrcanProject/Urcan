@@ -35,7 +35,9 @@ GLFWwindow *urcan::UrcanInstance::getWindow() {
 }
 
 GLFWwindow *urcan::UrcanInstance::replaceWindow(GLFWwindow *win) {
-	return _glfwCore.replaceWindow(win);
+	_glfwCore.replaceWindow(win);
+	UrcanInstance::getInstance()->notifyWindowChange();
+	return win;
 }
 
 void urcan::UrcanInstance::initVulkan() {
@@ -302,7 +304,10 @@ vk::Extent2D urcan::UrcanInstance::chooseSwapExtent(const vk::SurfaceCapabilitie
 	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
 		return capabilities.currentExtent;
 	} else {
-		vk::Extent2D actualExtent = {WIDTH, HEIGHT};
+		int width, height;
+		glfwGetWindowSize(_glfwCore.getWindow(), &width, &height);
+
+		vk::Extent2D actualExtent = {static_cast<uint32_t>(width), static_cast<uint32_t>(height)};
 
 		actualExtent.width = std::max(capabilities.minImageExtent.width,
 									  std::min(capabilities.maxImageExtent.width, actualExtent.width));
@@ -341,9 +346,15 @@ void urcan::UrcanInstance::createSwapChain() {
 		createInfo.pQueueFamilyIndices = queueFamilyIndices;
 	}
 
-	if (_device.get().createSwapchainKHR(&createInfo, nullptr, _swapChain.replace()) != vk::Result::eSuccess) {
+	vk::SwapchainKHR oldSwapChain = _swapChain;
+	createInfo.oldSwapchain = oldSwapChain;
+
+	vk::SwapchainKHR newSwapChain;
+	if (_device.get().createSwapchainKHR(&createInfo, nullptr, &newSwapChain) != vk::Result::eSuccess) {
 		throw std::runtime_error("failed to create swap chain!");
 	}
+
+	_swapChain = newSwapChain;
 
 	_device.get().getSwapchainImagesKHR(_swapChain, &imageCount, nullptr);
 	_swapChainImages.resize(imageCount);
@@ -353,6 +364,7 @@ void urcan::UrcanInstance::createSwapChain() {
 }
 
 void urcan::UrcanInstance::createImageViews() {
+	_swapChainImageViews.clear();
 	for (uint32_t i = 0; i < _swapChainImages.size(); i++)
 		_swapChainImageViews.push_back(
 				VDeleterExtended<vk::ImageView, vk::ImageViewDeleter, VDeleter<vk::Device, vk::DeviceDeleter>>{
@@ -450,6 +462,7 @@ void urcan::UrcanInstance::createRenderPass() {
 }
 
 void urcan::UrcanInstance::createFramebuffers() {
+	_swapChainFramebuffers.clear();
 	for (size_t i = 0; i < _swapChainImageViews.size(); i++)
 		_swapChainFramebuffers.push_back(VDeleterExtended<vk::Framebuffer, vk::FramebufferDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> {_device});
 	for (size_t i = 0; i < _swapChainImageViews.size(); i++) {
@@ -475,6 +488,10 @@ void urcan::UrcanInstance::createCommandPool() {
 }
 
 void urcan::UrcanInstance::createCommandBuffers() {
+	if (_commandBuffers.size() > 0) {
+		_device.get().freeCommandBuffers(_commandPool, _commandBuffers.size(), _commandBuffers.data());
+	}
+
 	_commandBuffers.resize(_swapChainFramebuffers.size());
 	vk::CommandBufferAllocateInfo allocInfo = {_commandPool, vk::CommandBufferLevel::ePrimary, static_cast<uint32_t>(_commandBuffers.size())};
 
@@ -507,8 +524,14 @@ void urcan::UrcanInstance::createSemaphores() {
 
 void urcan::UrcanInstance::drawFrame() {
 	uint32_t imageIndex;
-	_device.get().acquireNextImageKHR(_swapChain, std::numeric_limits<uint64_t>::max(), _imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+	vk::Result result = _device.get().acquireNextImageKHR(_swapChain, std::numeric_limits<uint64_t>::max(), _imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 
+	if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) {
+		recreateSwapChain();
+		return;
+	} else if (result != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to acquire swap chain image!");
+	}
 
 	vk::Semaphore waitSemaphores[] = {_imageAvailableSemaphore};
 	vk::PipelineStageFlags waitStages[] = {vk::PipelineStageFlagBits::eColorAttachmentOutput};
@@ -526,4 +549,19 @@ void urcan::UrcanInstance::drawFrame() {
 
 void urcan::UrcanInstance::waitIdle() {
 	_device.get().waitIdle();
+}
+
+void urcan::UrcanInstance::recreateSwapChain() {
+	_device.get().waitIdle();
+
+	createSwapChain();
+	createImageViews();
+	createRenderPass();
+	createGraphicsPipeline();
+	createFramebuffers();
+	createCommandBuffers();
+}
+
+void urcan::UrcanInstance::notifyWindowChange() {
+	this->recreateSwapChain();
 }

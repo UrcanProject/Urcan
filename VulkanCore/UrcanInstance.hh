@@ -97,6 +97,7 @@ namespace urcan {
 		void createCommandPool();
 		void createCommandBuffers();
 		void createSemaphores();
+		void recreateSwapChain();
 
 	private:
 		bool checkValidationLayerSupport();
@@ -120,6 +121,7 @@ namespace urcan {
 	public:
 		void drawFrame();
 		void waitIdle();
+		void notifyWindowChange();
 
 	public:
 		static UrcanInstance* getOrCreateInstance();
