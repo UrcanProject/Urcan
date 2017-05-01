@@ -2,12 +2,17 @@
 // Created by Guillaume on 14/04/2017.
 //
 
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <chrono>
 #include <iostream>
 #include <cstring>
 #include <set>
 #include <algorithm>
 #include "UrcanInstance.hh"
 #include "Utils.h"
+#include "Buffers/UniformBufferObject.hh"
 
 std::mutex urcan::UrcanInstance::_instanceMutex;
 bool urcan::UrcanInstance::_fullyInitialized = false;
@@ -49,13 +54,18 @@ void urcan::UrcanInstance::initVulkan() {
 	createSwapChain();
 	createImageViews();
 	createRenderPass();
+	createDescriptorSetLayout();
 	createGraphicsPipeline();
 	createFramebuffers();
 	createCommandPool();
 	createVertexBuffer();
+	createIndexBuffer();
+	createUniformBuffer();
+	createDescriptorPool();
+	createDescriptorSet();
 	createCommandBuffers();
 	createSemaphores();
-	//_fullyInitialized = true;
+	_fullyInitialized = true;
 }
 
 void urcan::UrcanInstance::createInstance() {
@@ -417,7 +427,7 @@ void urcan::UrcanInstance::createGraphicsPipeline() {
 
 	vk::PipelineRasterizationStateCreateInfo rasterizer = {vk::PipelineRasterizationStateCreateFlags(), VK_FALSE,
 														   VK_FALSE, vk::PolygonMode::eFill, vk::CullModeFlagBits::eBack,
-														   vk::FrontFace::eClockwise, VK_FALSE, 0, 0, 0, 1.0};
+														   vk::FrontFace::eCounterClockwise, VK_FALSE, 0, 0, 0, 1.0};
 
 	vk::PipelineMultisampleStateCreateInfo multisampling = {vk::PipelineMultisampleStateCreateFlags(), vk::SampleCountFlagBits::e1,
 															VK_FALSE, 1.0f, nullptr, VK_FALSE, VK_FALSE};
@@ -428,7 +438,8 @@ void urcan::UrcanInstance::createGraphicsPipeline() {
 	vk::PipelineColorBlendStateCreateInfo colorBlending = {vk::PipelineColorBlendStateCreateFlags(), VK_FALSE,
 														   vk::LogicOp::eCopy, 1, &colorBlendAttachment};
 
-	vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
+	vk::DescriptorSetLayout setLayouts[] = {_descriptorSetLayout};
+	vk::PipelineLayoutCreateInfo pipelineLayoutInfo = {vk::PipelineLayoutCreateFlags(), 1, setLayouts};
 	if (_device.get().createPipelineLayout(&pipelineLayoutInfo, nullptr, _pipelineLayout.replace()) != vk::Result::eSuccess) {
 		throw std::runtime_error("failed to create pipeline layout!");
 	}
@@ -520,7 +531,9 @@ void urcan::UrcanInstance::createCommandBuffers() {
 		vk::Buffer vertexBuffers[] = {_vertexBuffer};
 		vk::DeviceSize offsets[] = {0};
 		_commandBuffers[i].bindVertexBuffers(0, 1, vertexBuffers, offsets);
-		_commandBuffers[i].draw(vertices.size(), 1, 0, 0);
+		_commandBuffers[i].bindIndexBuffer(_indexBuffer, 0, vk::IndexType::eUint16);
+		_commandBuffers[i].bindDescriptorSets(vk::PipelineBindPoint::eGraphics, _pipelineLayout, 0, 1, &_descriptorSet, 0, nullptr);
+		_commandBuffers[i].drawIndexed(indices.size(), 1, 0, 0, 0);
 		_commandBuffers[i].endRenderPass();
 		_commandBuffers[i].end();
 	}
@@ -579,23 +592,34 @@ void urcan::UrcanInstance::notifyWindowChange() {
 }
 
 void urcan::UrcanInstance::createVertexBuffer() {
-	vk::BufferCreateInfo bufferInfo = {vk::BufferCreateFlags(), sizeof(vertices[0]) * vertices.size(), vk::BufferUsageFlagBits::eVertexBuffer, vk::SharingMode::eExclusive};
-	if (_device.get().createBuffer(&bufferInfo, nullptr, _vertexBuffer.replace()) != vk::Result::eSuccess) {
-		throw std::runtime_error("failed to create vertex buffer!");
-	}
 
-	vk::MemoryRequirements memRequirements;
-	_device.get().getBufferMemoryRequirements(_vertexBuffer, &memRequirements);
+	vk::DeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+	VDeleterExtended<vk::Buffer, vk::BufferDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> stagingBuffer {_device};
+	VDeleterExtended<vk::DeviceMemory, vk::DeviceMemoryDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> stagingBufferMemory {_device};
+	createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferSrc,  vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, stagingBuffer, stagingBufferMemory);
 
-	vk::MemoryAllocateInfo allocInfo = {memRequirements.size, findMemoryType(memRequirements.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent)};
-	if (_device.get().allocateMemory(&allocInfo, nullptr, _vertexBufferMemory.replace()) != vk::Result::eSuccess) {
-		throw std::runtime_error("failed to allocate vertex buffer memory!");
-	}
-	_device.get().bindBufferMemory(_vertexBuffer, _vertexBufferMemory, 0);
 	void* data;
-	_device.get().mapMemory(_vertexBufferMemory, 0, bufferInfo.size, static_cast<vk::MemoryMapFlagBits>(0), &data);
-	memcpy(data, vertices.data(), static_cast<size_t>(bufferInfo.size));
-	_device.get().unmapMemory(_vertexBufferMemory);
+	_device.get().mapMemory(stagingBufferMemory, 0, bufferSize, static_cast<vk::MemoryMapFlagBits>(0), &data);
+	memcpy(data, vertices.data(), static_cast<size_t>(bufferSize));
+	_device.get().unmapMemory(stagingBufferMemory);
+
+	createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal, _vertexBuffer, _vertexBufferMemory);
+	copyBuffer(stagingBuffer, _vertexBuffer, bufferSize);
+}
+
+void urcan::UrcanInstance::createIndexBuffer() {
+	vk::DeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+	VDeleterExtended<vk::Buffer, vk::BufferDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> stagingBuffer {_device};
+	VDeleterExtended<vk::DeviceMemory, vk::DeviceMemoryDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> stagingBufferMemory {_device};
+	createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferSrc,  vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, stagingBuffer, stagingBufferMemory);
+
+	void* data;
+	_device.get().mapMemory(stagingBufferMemory, 0, bufferSize, static_cast<vk::MemoryMapFlagBits>(0), &data);
+	memcpy(data, indices.data(), static_cast<size_t>(bufferSize));
+	_device.get().unmapMemory(stagingBufferMemory);
+
+	createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal, _indexBuffer, _indexBufferMemory);
+	copyBuffer(stagingBuffer, _indexBuffer, bufferSize);
 }
 
 uint32_t urcan::UrcanInstance::findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) {
@@ -609,4 +633,97 @@ uint32_t urcan::UrcanInstance::findMemoryType(uint32_t typeFilter, vk::MemoryPro
 		}
 
 	throw std::runtime_error("failed to find suitable memory type!");
+}
+
+void urcan::UrcanInstance::createBuffer(vk::DeviceSize size,
+										vk::BufferUsageFlags usage,
+										vk::MemoryPropertyFlags properties,
+										urcan::VDeleterExtended<vk::Buffer, vk::BufferDeleter, urcan::VDeleter<vk::Device, vk::DeviceDeleter>>& buffer,
+										urcan::VDeleterExtended<vk::DeviceMemory, vk::DeviceMemoryDeleter, urcan::VDeleter<vk::Device, vk::DeviceDeleter>>& bufferMemory) {
+	vk::BufferCreateInfo bufferInfo = {vk::BufferCreateFlags(), size, usage, vk::SharingMode::eExclusive};
+	if (_device.get().createBuffer(&bufferInfo, nullptr, buffer.replace()) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to create vertex buffer!");
+	}
+
+	vk::MemoryRequirements memRequirements;
+	_device.get().getBufferMemoryRequirements(buffer, &memRequirements);
+
+	vk::MemoryAllocateInfo allocInfo = {memRequirements.size, findMemoryType(memRequirements.memoryTypeBits, properties)};
+	if (_device.get().allocateMemory(&allocInfo, nullptr, bufferMemory.replace()) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to allocate vertex buffer memory!");
+	}
+	_device.get().bindBufferMemory(buffer, bufferMemory, 0);
+}
+
+void urcan::UrcanInstance::copyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize size) {
+	vk::CommandBufferAllocateInfo allocInfo = {_commandPool, vk::CommandBufferLevel::ePrimary, 1};
+	vk::CommandBuffer commandBuffer;
+	_device.get().allocateCommandBuffers(&allocInfo, &commandBuffer);
+
+	vk::CommandBufferBeginInfo beginInfo = {vk::CommandBufferUsageFlagBits::eOneTimeSubmit};
+	commandBuffer.begin(&beginInfo);
+
+	vk::BufferCopy copyRegion = {0, 0, size};
+	commandBuffer.copyBuffer(srcBuffer, dstBuffer, 1, &copyRegion);
+	commandBuffer.end();
+
+	vk::SubmitInfo submitInfo = {};
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &commandBuffer;
+	_graphicsQueue.submit(1, &submitInfo, VK_NULL_HANDLE);
+	_graphicsQueue.waitIdle();
+	_device.get().freeCommandBuffers(_commandPool, 1, &commandBuffer);
+}
+
+void urcan::UrcanInstance::createDescriptorSetLayout() {
+	vk::DescriptorSetLayoutBinding uboLayoutBinding = {0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex, nullptr};
+	vk::DescriptorSetLayoutCreateInfo layoutInfo = {vk::DescriptorSetLayoutCreateFlags(), 1, &uboLayoutBinding};
+
+	if (_device.get().createDescriptorSetLayout(&layoutInfo, nullptr, _descriptorSetLayout.replace()) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to create descriptor set layout!");
+	}
+}
+
+void urcan::UrcanInstance::createUniformBuffer() {
+	vk::DeviceSize bufferSize = sizeof(UniformBufferObject);
+
+	createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, _uniformStagingBuffer, _uniformStagingBufferMemory);
+	createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal, _uniformBuffer, _uniformBufferMemory);
+}
+
+void urcan::UrcanInstance::updateUniformBuffer() {
+	static auto startTime = std::chrono::high_resolution_clock::now();
+	auto currentTime = std::chrono::high_resolution_clock::now();
+	float time = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count() / 1000.0f;
+	UniformBufferObject ubo;
+	ubo.model = glm::rotate(glm::mat4(), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.proj = glm::perspective(glm::radians(45.0f), _swapChainExtent.width / static_cast<float>(_swapChainExtent.height), 0.1f, 10.0f);
+	ubo.proj[1][1] *= -1;
+
+	void* data;
+	_device.get().mapMemory(_uniformStagingBufferMemory, 0, sizeof(ubo), static_cast<vk::MemoryMapFlagBits>(0), &data);
+	memcpy(data, &ubo, sizeof(ubo));
+	_device.get().unmapMemory(_uniformStagingBufferMemory);
+
+	copyBuffer(_uniformStagingBuffer, _uniformBuffer, sizeof(ubo));
+}
+
+void urcan::UrcanInstance::createDescriptorPool() {
+	vk::DescriptorPoolSize poolSize = {vk::DescriptorType::eUniformBuffer, 1};
+	vk::DescriptorPoolCreateInfo poolInfo = {vk::DescriptorPoolCreateFlags(), 1, 1, &poolSize};
+	if (_device.get().createDescriptorPool(&poolInfo, nullptr, _descriptorPool.replace()) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to create descriptor pool!");
+	}
+}
+
+void urcan::UrcanInstance::createDescriptorSet() {
+	vk::DescriptorSetLayout layouts[] = {_descriptorSetLayout};
+	vk::DescriptorSetAllocateInfo allocInfo = {_descriptorPool, 1, layouts};
+	if (_device.get().allocateDescriptorSets(&allocInfo, &_descriptorSet) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to allocate descriptor set!");
+	}
+	vk::DescriptorBufferInfo bufferInfo = {_uniformBuffer, 0, sizeof(UniformBufferObject)};
+	vk::WriteDescriptorSet descriptorWrite = {_descriptorSet, 0, 0, 1, vk::DescriptorType::eUniformBuffer, nullptr, &bufferInfo, nullptr};
+	_device.get().updateDescriptorSets(1, &descriptorWrite, 0, nullptr);
 }

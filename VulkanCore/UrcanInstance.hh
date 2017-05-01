@@ -65,6 +65,7 @@ namespace urcan {
 		std::vector<VDeleterExtended<vk::Framebuffer, vk::FramebufferDeleter, VDeleter<vk::Device, vk::DeviceDeleter>>> _swapChainFramebuffers;
 
 		VDeleterExtended<vk::RenderPass, vk::RenderPassDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _renderPass {_device};
+		VDeleterExtended<vk::DescriptorSetLayout, vk::DescriptorSetLayoutDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _descriptorSetLayout {_device};
 		VDeleterExtended<vk::PipelineLayout, vk::PipelineLayoutDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _pipelineLayout {_device};
 		VDeleterExtended<vk::Pipeline, vk::PipelineDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _graphicsPipeline {_device};
 
@@ -76,6 +77,16 @@ namespace urcan {
 
 		VDeleterExtended<vk::Buffer, vk::BufferDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _vertexBuffer {_device};
 		VDeleterExtended<vk::DeviceMemory, vk::DeviceMemoryDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _vertexBufferMemory {_device};
+		VDeleterExtended<vk::Buffer, vk::BufferDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _indexBuffer {_device};
+		VDeleterExtended<vk::DeviceMemory, vk::DeviceMemoryDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _indexBufferMemory {_device};
+
+		VDeleterExtended<vk::Buffer, vk::BufferDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _uniformStagingBuffer {_device};
+		VDeleterExtended<vk::DeviceMemory, vk::DeviceMemoryDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _uniformStagingBufferMemory {_device};
+		VDeleterExtended<vk::Buffer, vk::BufferDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _uniformBuffer {_device};
+		VDeleterExtended<vk::DeviceMemory, vk::DeviceMemoryDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _uniformBufferMemory {_device};
+
+		VDeleterExtended<vk::DescriptorPool, vk::DescriptorPoolDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _descriptorPool {_device};
+		vk::DescriptorSet _descriptorSet;
 
 
 	protected:
@@ -100,9 +111,14 @@ namespace urcan {
 		void createFramebuffers();
 		void createCommandPool();
 		void createVertexBuffer();
+		void createIndexBuffer();
 		void createCommandBuffers();
 		void createSemaphores();
 		void recreateSwapChain();
+		void createDescriptorSetLayout();
+		void createUniformBuffer();
+		void createDescriptorPool();
+		void createDescriptorSet();
 
 	private:
 		bool checkValidationLayerSupport();
@@ -122,12 +138,19 @@ namespace urcan {
 	private:
 		void createShaderModule(const std::vector<char>& code, urcan::VDeleterExtended<vk::ShaderModule, vk::ShaderModuleDeleter,
 				VDeleter<vk::Device, vk::DeviceDeleter>>& shaderModule);
+
+	private:
 		uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties);
+		void createBuffer(vk::DeviceSize size, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags properties,
+						  VDeleterExtended<vk::Buffer, vk::BufferDeleter, VDeleter<vk::Device, vk::DeviceDeleter>>& buffer,
+						  VDeleterExtended<vk::DeviceMemory, vk::DeviceMemoryDeleter, VDeleter<vk::Device, vk::DeviceDeleter>>& bufferMemory);
+		void copyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize size);
 
 	public:
 		void drawFrame();
 		void waitIdle();
 		void notifyWindowChange();
+		void updateUniformBuffer();
 
 	public:
 		static UrcanInstance* getOrCreateInstance();

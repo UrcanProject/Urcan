@@ -14,7 +14,7 @@ set(SOURCE_FILES main.cpp VulkanCore/BasicConfiguration.hpp VulkanCore/UrcanInst
         ClassUtils/ScopeLock.cpp ClassUtils/ScopeLock.hh TestApplication/UrcanApp.cpp TestApplication/UrcanApp.hh
         VulkanCore/VDeleter.hpp VulkanCore/VCallback.cpp VulkanCore/VCallback.hh VulkanCore/GLFWCore/GLFWCore.cpp
         VulkanCore/GLFWCore/GLFWCore.hh ClassUtils/Utils.cpp ClassUtils/Utils.h Patterns/Singleton.hpp
-        VulkanCore/VertexComputation/Vertex.cpp VulkanCore/VertexComputation/Vertex.hh)
+        VulkanCore/Buffers/Vertex.cpp VulkanCore/Buffers/Vertex.hh VulkanCore/Buffers/UniformBufferObject.cpp VulkanCore/Buffers/UniformBufferObject.hh)
 add_executable(Vulkan ${SOURCE_FILES})
 
 target_link_libraries(Vulkan glfw3 gdi32 opengl32 vulkan-1 pthread)
