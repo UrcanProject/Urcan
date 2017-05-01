@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <vulkan/vulkan.hpp>
+#include "VertexComputation/Vertex.hh"
 
 namespace urcan {
 	const int WIDTH = 800;
@@ -26,6 +27,12 @@ union uConverter
 {
 	T *src;
 	U *dest;
+};
+
+const std::vector<Vertex> vertices = {
+		{{-0.5f, -0.5f}, {1.0f, 1.0f, 0.0f}},
+		{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+		{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
 };
 
 #endif //VULKAN_BASIC_CONFIGURATION_HPP

@@ -74,6 +74,10 @@ namespace urcan {
 		VDeleterExtended<vk::Semaphore, vk::SemaphoreDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _imageAvailableSemaphore {_device};
 		VDeleterExtended<vk::Semaphore, vk::SemaphoreDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _renderFinishedSemaphore {_device};
 
+		VDeleterExtended<vk::Buffer, vk::BufferDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _vertexBuffer {_device};
+		VDeleterExtended<vk::DeviceMemory, vk::DeviceMemoryDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> _vertexBufferMemory {_device};
+
+
 	protected:
 		virtual ~UrcanInstance();
 
@@ -95,6 +99,7 @@ namespace urcan {
 		void createRenderPass();
 		void createFramebuffers();
 		void createCommandPool();
+		void createVertexBuffer();
 		void createCommandBuffers();
 		void createSemaphores();
 		void recreateSwapChain();
@@ -117,6 +122,7 @@ namespace urcan {
 	private:
 		void createShaderModule(const std::vector<char>& code, urcan::VDeleterExtended<vk::ShaderModule, vk::ShaderModuleDeleter,
 				VDeleter<vk::Device, vk::DeviceDeleter>>& shaderModule);
+		uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties);
 
 	public:
 		void drawFrame();

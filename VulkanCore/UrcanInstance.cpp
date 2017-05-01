@@ -52,6 +52,7 @@ void urcan::UrcanInstance::initVulkan() {
 	createGraphicsPipeline();
 	createFramebuffers();
 	createCommandPool();
+	createVertexBuffer();
 	createCommandBuffers();
 	createSemaphores();
 	//_fullyInitialized = true;
@@ -397,7 +398,15 @@ void urcan::UrcanInstance::createGraphicsPipeline() {
 															 fragShaderModule, "main"};
 	vk::PipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
 
-	vk::PipelineVertexInputStateCreateInfo vertexInputInfo; //Basic constructor works well here
+	vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
+	auto bindingDescription = Vertex::getBindingDescription();
+	auto attributeDescriptions = Vertex::getAttributeDescriptions();
+
+	vertexInputInfo.vertexBindingDescriptionCount = 1;
+	vertexInputInfo.vertexAttributeDescriptionCount = attributeDescriptions.size();
+	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+
 	vk::PipelineInputAssemblyStateCreateInfo inputAssembly = {vk::PipelineInputAssemblyStateCreateFlags(),
 															  vk::PrimitiveTopology::eTriangleList, VK_FALSE};
 
@@ -508,7 +517,10 @@ void urcan::UrcanInstance::createCommandBuffers() {
 		vk::RenderPassBeginInfo renderPassInfo = {_renderPass, _swapChainFramebuffers[i], {{0, 0}, _swapChainExtent}, 1, &clearColor};
 		_commandBuffers[i].beginRenderPass(&renderPassInfo, vk::SubpassContents::eInline);
 		_commandBuffers[i].bindPipeline(vk::PipelineBindPoint::eGraphics, _graphicsPipeline);
-		_commandBuffers[i].draw(3, 1, 0, 0);
+		vk::Buffer vertexBuffers[] = {_vertexBuffer};
+		vk::DeviceSize offsets[] = {0};
+		_commandBuffers[i].bindVertexBuffers(0, 1, vertexBuffers, offsets);
+		_commandBuffers[i].draw(vertices.size(), 1, 0, 0);
 		_commandBuffers[i].endRenderPass();
 		_commandBuffers[i].end();
 	}
@@ -564,4 +576,37 @@ void urcan::UrcanInstance::recreateSwapChain() {
 
 void urcan::UrcanInstance::notifyWindowChange() {
 	this->recreateSwapChain();
+}
+
+void urcan::UrcanInstance::createVertexBuffer() {
+	vk::BufferCreateInfo bufferInfo = {vk::BufferCreateFlags(), sizeof(vertices[0]) * vertices.size(), vk::BufferUsageFlagBits::eVertexBuffer, vk::SharingMode::eExclusive};
+	if (_device.get().createBuffer(&bufferInfo, nullptr, _vertexBuffer.replace()) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to create vertex buffer!");
+	}
+
+	vk::MemoryRequirements memRequirements;
+	_device.get().getBufferMemoryRequirements(_vertexBuffer, &memRequirements);
+
+	vk::MemoryAllocateInfo allocInfo = {memRequirements.size, findMemoryType(memRequirements.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent)};
+	if (_device.get().allocateMemory(&allocInfo, nullptr, _vertexBufferMemory.replace()) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to allocate vertex buffer memory!");
+	}
+	_device.get().bindBufferMemory(_vertexBuffer, _vertexBufferMemory, 0);
+	void* data;
+	_device.get().mapMemory(_vertexBufferMemory, 0, bufferInfo.size, static_cast<vk::MemoryMapFlagBits>(0), &data);
+	memcpy(data, vertices.data(), static_cast<size_t>(bufferInfo.size));
+	_device.get().unmapMemory(_vertexBufferMemory);
+}
+
+uint32_t urcan::UrcanInstance::findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) {
+	vk::PhysicalDeviceMemoryProperties memProperties;
+	_physicalDevice.getMemoryProperties(&memProperties);
+
+		for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+			if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+				return i;
+			}
+		}
+
+	throw std::runtime_error("failed to find suitable memory type!");
 }
