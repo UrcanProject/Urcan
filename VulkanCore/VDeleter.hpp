@@ -20,7 +20,7 @@ namespace urcan {
 
 	protected:
 		virtual void cleanup() {
-			//std::this_thread::__sleep_for(std::chrono::seconds(0), std::chrono::nanoseconds(10000000));//fixme: Ugly fix for an heisenbug SEGV. It slow down the destructor, and everything is fine
+			std::this_thread::__sleep_for(std::chrono::seconds(0), std::chrono::nanoseconds(10000000));//fixme: Ugly fix for an heisenbug SEGV. It slow down the destructor, and everything is fine
 			if (_obj) {
 				U del = U();
 				del(_obj);

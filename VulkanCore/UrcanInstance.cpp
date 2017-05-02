@@ -56,8 +56,9 @@ void urcan::UrcanInstance::initVulkan() {
 	createRenderPass();
 	createDescriptorSetLayout();
 	createGraphicsPipeline();
-	createFramebuffers();
 	createCommandPool();
+	createDepthResources();
+	createFramebuffers();
 	createVertexBuffer();
 	createIndexBuffer();
 	createUniformBuffer();
@@ -444,8 +445,11 @@ void urcan::UrcanInstance::createGraphicsPipeline() {
 		throw std::runtime_error("failed to create pipeline layout!");
 	}
 
+	vk::PipelineDepthStencilStateCreateInfo depthStencil = {vk::PipelineDepthStencilStateCreateFlags(), VK_TRUE, VK_TRUE,
+															vk::CompareOp::eLess, VK_FALSE, VK_FALSE, {}, {}, 0.0f, 1.0f};
+
 	vk::GraphicsPipelineCreateInfo pipelineInfo = {vk::PipelineCreateFlags(), 2, shaderStages, &vertexInputInfo, &inputAssembly, nullptr, &viewportState, &rasterizer,
-												   &multisampling, nullptr, &colorBlending, nullptr, _pipelineLayout, _renderPass, 0, VK_NULL_HANDLE, -1};
+												   &multisampling, &depthStencil, &colorBlending, nullptr, _pipelineLayout, _renderPass, 0, VK_NULL_HANDLE, -1};
 
 	if (_device.get().createGraphicsPipelines(VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, _graphicsPipeline.replace()) != vk::Result::eSuccess) {
 		throw std::runtime_error("failed to create graphics pipeline!");
@@ -470,12 +474,22 @@ void urcan::UrcanInstance::createRenderPass() {
 												 vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare,
 												 vk::ImageLayout::eUndefined, vk::ImageLayout::ePresentSrcKHR};
 	vk::AttachmentReference colorAttachmentRef = {0, vk::ImageLayout::eColorAttachmentOptimal};
+
+	vk::AttachmentDescription depthAttachment = {vk::AttachmentDescriptionFlags(), findDepthFormat(), vk::SampleCountFlagBits::e1,
+												 vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eDontCare,
+												 vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare,
+												 vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal};
+	vk::AttachmentReference depthAttachmentRef = {1, vk::ImageLayout::eDepthStencilAttachmentOptimal};
+
+
 	vk::SubpassDescription subpass = {vk::SubpassDescriptionFlags(), vk::PipelineBindPoint::eGraphics, 0, nullptr, 1, &colorAttachmentRef};
+	subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
 	vk::SubpassDependency dependency = {VK_SUBPASS_EXTERNAL, 0, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eColorAttachmentOutput,
 										vk::AccessFlags(), vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite};
 
-	vk::RenderPassCreateInfo renderPassInfo = {vk::RenderPassCreateFlags(), 1, &colorAttachment, 1, &subpass, 1, &dependency};
+	std::array<vk::AttachmentDescription, 2> attachments = {colorAttachment, depthAttachment};
+	vk::RenderPassCreateInfo renderPassInfo = {vk::RenderPassCreateFlags(), attachments.size(), attachments.data(), 1, &subpass, 1, &dependency};
 	if (_device.get().createRenderPass(&renderPassInfo, nullptr, _renderPass.replace()) != vk::Result::eSuccess) {
 		throw std::runtime_error("failed to create render pass!");
 	}
@@ -486,11 +500,11 @@ void urcan::UrcanInstance::createFramebuffers() {
 	for (size_t i = 0; i < _swapChainImageViews.size(); i++)
 		_swapChainFramebuffers.push_back(VDeleterExtended<vk::Framebuffer, vk::FramebufferDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> {_device});
 	for (size_t i = 0; i < _swapChainImageViews.size(); i++) {
-		vk::ImageView attachments[] = {
-				_swapChainImageViews[i].get()
+		std::array<vk::ImageView, 2> attachments = {
+				_swapChainImageViews[i],
+				_depthImageView
 		};
-
-		vk::FramebufferCreateInfo framebufferInfo = {vk::FramebufferCreateFlags(), _renderPass, 1, attachments, _swapChainExtent.width, _swapChainExtent.height, 1};
+		vk::FramebufferCreateInfo framebufferInfo = {vk::FramebufferCreateFlags(), _renderPass, attachments.size(), attachments.data(), _swapChainExtent.width, _swapChainExtent.height, 1};
 
 		if (_device.get().createFramebuffer(&framebufferInfo, nullptr, _swapChainFramebuffers[i].replace()) != vk::Result::eSuccess) {
 			throw std::runtime_error("failed to create framebuffer!");
@@ -524,8 +538,10 @@ void urcan::UrcanInstance::createCommandBuffers() {
 		_commandBuffers[i].begin(&beginInfo);
 
 		const std::array<float, 4> clearColorTmp {0.0f, 0.0f, 0.0f, 1.0f};
-		vk::ClearValue clearColor (clearColorTmp);
-		vk::RenderPassBeginInfo renderPassInfo = {_renderPass, _swapChainFramebuffers[i], {{0, 0}, _swapChainExtent}, 1, &clearColor};
+		std::array<vk::ClearValue, 2> clearValues;
+		clearValues[0].color = clearColorTmp;
+		clearValues[1].setDepthStencil({1.0f, 0});
+		vk::RenderPassBeginInfo renderPassInfo = {_renderPass, _swapChainFramebuffers[i], {{0, 0}, _swapChainExtent}, clearValues.size(), clearValues.data()};
 		_commandBuffers[i].beginRenderPass(&renderPassInfo, vk::SubpassContents::eInline);
 		_commandBuffers[i].bindPipeline(vk::PipelineBindPoint::eGraphics, _graphicsPipeline);
 		vk::Buffer vertexBuffers[] = {_vertexBuffer};
@@ -583,6 +599,7 @@ void urcan::UrcanInstance::recreateSwapChain() {
 	createImageViews();
 	createRenderPass();
 	createGraphicsPipeline();
+	createDepthResources();
 	createFramebuffers();
 	createCommandBuffers();
 }
@@ -592,7 +609,6 @@ void urcan::UrcanInstance::notifyWindowChange() {
 }
 
 void urcan::UrcanInstance::createVertexBuffer() {
-
 	vk::DeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 	VDeleterExtended<vk::Buffer, vk::BufferDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> stagingBuffer {_device};
 	VDeleterExtended<vk::DeviceMemory, vk::DeviceMemoryDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> stagingBufferMemory {_device};
@@ -696,7 +712,7 @@ void urcan::UrcanInstance::updateUniformBuffer() {
 	auto currentTime = std::chrono::high_resolution_clock::now();
 	float time = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count() / 1000.0f;
 	UniformBufferObject ubo;
-	ubo.model = glm::rotate(glm::mat4(), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.model = glm::rotate(glm::mat4(), time * glm::radians(90.0f), glm::vec3(0.2f, 0.5f, 1.0f));
 	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	ubo.proj = glm::perspective(glm::radians(45.0f), _swapChainExtent.width / static_cast<float>(_swapChainExtent.height), 0.1f, 10.0f);
 	ubo.proj[1][1] *= -1;
@@ -726,4 +742,171 @@ void urcan::UrcanInstance::createDescriptorSet() {
 	vk::DescriptorBufferInfo bufferInfo = {_uniformBuffer, 0, sizeof(UniformBufferObject)};
 	vk::WriteDescriptorSet descriptorWrite = {_descriptorSet, 0, 0, 1, vk::DescriptorType::eUniformBuffer, nullptr, &bufferInfo, nullptr};
 	_device.get().updateDescriptorSets(1, &descriptorWrite, 0, nullptr);
+}
+
+void urcan::UrcanInstance::createDepthResources() {
+	vk::Format depthFormat = findDepthFormat();
+	createImage(_swapChainExtent.width, _swapChainExtent.height, depthFormat, vk::ImageTiling::eOptimal,
+				vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::MemoryPropertyFlagBits::eDeviceLocal, _depthImage, _depthImageMemory);
+	createImageView(_depthImage, depthFormat, vk::ImageAspectFlagBits::eDepth,_depthImageView);
+}
+
+vk::Format urcan::UrcanInstance::findSupportedFormat(const std::vector<vk::Format> &candidates, vk::ImageTiling tiling,
+													 vk::FormatFeatureFlags features) {
+	for (vk::Format format : candidates) {
+		vk::FormatProperties props;
+		_physicalDevice.getFormatProperties(format, &props);
+		if (tiling == vk::ImageTiling::eLinear && (props.linearTilingFeatures & features) == features) {
+			return format;
+		} else if (tiling == vk::ImageTiling::eOptimal && (props.optimalTilingFeatures & features) == features) {
+			return format;
+		}
+	}
+
+	throw std::runtime_error("failed to find supported format!");
+}
+
+vk::Format urcan::UrcanInstance::findDepthFormat() {
+	return findSupportedFormat(
+			{vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint},
+			vk::ImageTiling::eOptimal, vk::FormatFeatureFlagBits ::eDepthStencilAttachment
+	);
+}
+
+bool urcan::UrcanInstance::hasStencilComponent(vk::Format format) {
+	return format == vk::Format::eD32SfloatS8Uint || format == vk::Format::eD24UnormS8Uint;
+}
+
+void urcan::UrcanInstance::createImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags,
+										   urcan::VDeleterExtended<vk::ImageView, vk::ImageViewDeleter, urcan::VDeleter<vk::Device, vk::DeviceDeleter>> &imageView) {
+	vk::ImageViewCreateInfo viewInfo = {};
+	viewInfo.image = image;
+	viewInfo.viewType = vk::ImageViewType::e2D;
+	viewInfo.format = format;
+	viewInfo.subresourceRange.aspectMask = aspectFlags;
+	viewInfo.subresourceRange.baseMipLevel = 0;
+	viewInfo.subresourceRange.levelCount = 1;
+	viewInfo.subresourceRange.baseArrayLayer = 0;
+	viewInfo.subresourceRange.layerCount = 1;
+
+	if (_device.get().createImageView(&viewInfo, nullptr, imageView.replace()) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to create texture image view!");
+	}
+}
+
+void urcan::UrcanInstance::createImage(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling,
+									   vk::ImageUsageFlags usage, vk::MemoryPropertyFlags properties,
+									   urcan::VDeleterExtended<vk::Image, vk::ImageDeleter, urcan::VDeleter<vk::Device, vk::DeviceDeleter>> &image,
+									   urcan::VDeleterExtended<vk::DeviceMemory, vk::DeviceMemoryDeleter, urcan::VDeleter<vk::Device, vk::DeviceDeleter>> &imageMemory) {
+	vk::ImageCreateInfo imageInfo = {};
+	imageInfo.imageType = vk::ImageType::e2D;
+	imageInfo.extent.width = width;
+	imageInfo.extent.height = height;
+	imageInfo.extent.depth = 1;
+	imageInfo.mipLevels = 1;
+	imageInfo.arrayLayers = 1;
+	imageInfo.format = format;
+	imageInfo.tiling = tiling;
+	imageInfo.initialLayout = vk::ImageLayout::ePreinitialized;
+	imageInfo.usage = usage;
+	imageInfo.samples = vk::SampleCountFlagBits::e1;
+	imageInfo.sharingMode = vk::SharingMode::eExclusive;
+
+	if (_device.get().createImage(&imageInfo, nullptr, image.replace()) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to create image!");
+	}
+
+	vk::MemoryRequirements memRequirements;
+	_device.get().getImageMemoryRequirements(image, &memRequirements);
+
+	vk::MemoryAllocateInfo allocInfo = {};
+	allocInfo.allocationSize = memRequirements.size;
+	allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
+
+	if (_device.get().allocateMemory(&allocInfo, nullptr, imageMemory.replace()) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to allocate image memory!");
+	}
+
+	_device.get().bindImageMemory(image, imageMemory, 0);
+}
+
+void urcan::UrcanInstance::transitionImageLayout(vk::Image image, vk::Format format, vk::ImageLayout oldLayout,
+												 vk::ImageLayout newLayout) {
+	vk::CommandBuffer commandBuffer = beginSingleTimeCommands();
+
+	vk::ImageMemoryBarrier barrier = {};
+	barrier.oldLayout = oldLayout;
+	barrier.newLayout = newLayout;
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.image = image;
+
+	if (newLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
+		barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
+
+		if (hasStencilComponent(format)) {
+			barrier.subresourceRange.aspectMask |= vk::ImageAspectFlagBits::eStencil;
+		}
+	} else {
+		barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+	}
+
+	barrier.subresourceRange.baseMipLevel = 0;
+	barrier.subresourceRange.levelCount = 1;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = 1;
+
+	if (oldLayout == vk::ImageLayout::ePreinitialized && newLayout == vk::ImageLayout::eTransferSrcOptimal) {
+		barrier.srcAccessMask = vk::AccessFlagBits::eHostWrite;
+		barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
+	} else if (oldLayout == vk::ImageLayout::ePreinitialized && newLayout == vk::ImageLayout::eTransferDstOptimal) {
+		barrier.srcAccessMask = vk::AccessFlagBits::eHostWrite;
+		barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+	} else if (oldLayout == vk::ImageLayout::eTransferDstOptimal && newLayout == vk::ImageLayout::eShaderReadOnlyOptimal) {
+		barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+		barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+	} else if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
+		barrier.srcAccessMask = static_cast<vk::AccessFlagBits>(0);
+		barrier.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+	} else {
+		throw std::invalid_argument("unsupported layout transition!");
+	}
+
+	commandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe,
+								  static_cast<vk::DependencyFlagBits>(0),
+								  0, nullptr,
+								  0, nullptr,
+								  1, &barrier);
+
+	endSingleTimeCommands(commandBuffer);
+}
+
+vk::CommandBuffer urcan::UrcanInstance::beginSingleTimeCommands() {
+	vk::CommandBufferAllocateInfo allocInfo = {};
+	allocInfo.level = vk::CommandBufferLevel::ePrimary;
+	allocInfo.commandPool = _commandPool;
+	allocInfo.commandBufferCount = 1;
+
+	vk::CommandBuffer commandBuffer;
+	_device.get().allocateCommandBuffers(&allocInfo, &commandBuffer);
+
+	vk::CommandBufferBeginInfo beginInfo = {};
+	beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+
+	commandBuffer.begin(&beginInfo);
+
+	return commandBuffer;
+}
+
+void urcan::UrcanInstance::endSingleTimeCommands(vk::CommandBuffer commandBuffer) {
+	commandBuffer.end();
+
+	vk::SubmitInfo submitInfo = {};
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &commandBuffer;
+
+	_graphicsQueue.submit(1, &submitInfo, VK_NULL_HANDLE);
+	_graphicsQueue.waitIdle();
+
+	_device.get().freeCommandBuffers(_commandPool, 1, &commandBuffer);
 }
