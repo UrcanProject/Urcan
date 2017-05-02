@@ -2,6 +2,7 @@
 // Created by Guillaume on 16/04/2017.
 //
 
+#include <UrcanInstance.hh>
 #include "BasicConfiguration.hpp"
 #include "GLFWCore.hh"
 
@@ -14,10 +15,11 @@ urcan::GLFWCore::GLFWCore() {
 	glfwInit();
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
 	_window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
 	glfwSetKeyCallback(_window, keyCallback);
+	glfwSetWindowSizeCallback(_window, GLFWCore::onWindowResized);
 }
 
 urcan::GLFWCore::~GLFWCore() {
@@ -38,4 +40,10 @@ GLFWwindow* urcan::GLFWCore::replaceWindow(GLFWwindow* win) {
 	glfwDestroyWindow(_window);
 	this->_window = win;
 	return this->_window;
+}
+
+void urcan::GLFWCore::onWindowResized(GLFWwindow*, int width, int height) {
+	if (width == 0 || height == 0) return;
+
+	urcan::UrcanInstance::getInstance()->notifyWindowChange();
 }

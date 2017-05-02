@@ -2,12 +2,17 @@
 // Created by Guillaume on 14/04/2017.
 //
 
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <chrono>
 #include <iostream>
 #include <cstring>
 #include <set>
 #include <algorithm>
 #include "UrcanInstance.hh"
 #include "Utils.h"
+#include "Buffers/UniformBufferObject.hh"
 
 std::mutex urcan::UrcanInstance::_instanceMutex;
 bool urcan::UrcanInstance::_fullyInitialized = false;
@@ -35,7 +40,9 @@ GLFWwindow *urcan::UrcanInstance::getWindow() {
 }
 
 GLFWwindow *urcan::UrcanInstance::replaceWindow(GLFWwindow *win) {
-	return _glfwCore.replaceWindow(win);
+	_glfwCore.replaceWindow(win);
+	UrcanInstance::getInstance()->notifyWindowChange();
+	return win;
 }
 
 void urcan::UrcanInstance::initVulkan() {
@@ -47,12 +54,19 @@ void urcan::UrcanInstance::initVulkan() {
 	createSwapChain();
 	createImageViews();
 	createRenderPass();
+	createDescriptorSetLayout();
 	createGraphicsPipeline();
-	createFramebuffers();
 	createCommandPool();
+	createDepthResources();
+	createFramebuffers();
+	createVertexBuffer();
+	createIndexBuffer();
+	createUniformBuffer();
+	createDescriptorPool();
+	createDescriptorSet();
 	createCommandBuffers();
 	createSemaphores();
-	//_fullyInitialized = true;
+	_fullyInitialized = true;
 }
 
 void urcan::UrcanInstance::createInstance() {
@@ -302,7 +316,10 @@ vk::Extent2D urcan::UrcanInstance::chooseSwapExtent(const vk::SurfaceCapabilitie
 	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
 		return capabilities.currentExtent;
 	} else {
-		vk::Extent2D actualExtent = {WIDTH, HEIGHT};
+		int width, height;
+		glfwGetWindowSize(_glfwCore.getWindow(), &width, &height);
+
+		vk::Extent2D actualExtent = {static_cast<uint32_t>(width), static_cast<uint32_t>(height)};
 
 		actualExtent.width = std::max(capabilities.minImageExtent.width,
 									  std::min(capabilities.maxImageExtent.width, actualExtent.width));
@@ -341,9 +358,15 @@ void urcan::UrcanInstance::createSwapChain() {
 		createInfo.pQueueFamilyIndices = queueFamilyIndices;
 	}
 
-	if (_device.get().createSwapchainKHR(&createInfo, nullptr, _swapChain.replace()) != vk::Result::eSuccess) {
+	vk::SwapchainKHR oldSwapChain = _swapChain;
+	createInfo.oldSwapchain = oldSwapChain;
+
+	vk::SwapchainKHR newSwapChain;
+	if (_device.get().createSwapchainKHR(&createInfo, nullptr, &newSwapChain) != vk::Result::eSuccess) {
 		throw std::runtime_error("failed to create swap chain!");
 	}
+
+	_swapChain = newSwapChain;
 
 	_device.get().getSwapchainImagesKHR(_swapChain, &imageCount, nullptr);
 	_swapChainImages.resize(imageCount);
@@ -353,6 +376,7 @@ void urcan::UrcanInstance::createSwapChain() {
 }
 
 void urcan::UrcanInstance::createImageViews() {
+	_swapChainImageViews.clear();
 	for (uint32_t i = 0; i < _swapChainImages.size(); i++)
 		_swapChainImageViews.push_back(
 				VDeleterExtended<vk::ImageView, vk::ImageViewDeleter, VDeleter<vk::Device, vk::DeviceDeleter>>{
@@ -385,7 +409,15 @@ void urcan::UrcanInstance::createGraphicsPipeline() {
 															 fragShaderModule, "main"};
 	vk::PipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
 
-	vk::PipelineVertexInputStateCreateInfo vertexInputInfo; //Basic constructor works well here
+	vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
+	auto bindingDescription = Vertex::getBindingDescription();
+	auto attributeDescriptions = Vertex::getAttributeDescriptions();
+
+	vertexInputInfo.vertexBindingDescriptionCount = 1;
+	vertexInputInfo.vertexAttributeDescriptionCount = attributeDescriptions.size();
+	vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+	vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+
 	vk::PipelineInputAssemblyStateCreateInfo inputAssembly = {vk::PipelineInputAssemblyStateCreateFlags(),
 															  vk::PrimitiveTopology::eTriangleList, VK_FALSE};
 
@@ -396,7 +428,7 @@ void urcan::UrcanInstance::createGraphicsPipeline() {
 
 	vk::PipelineRasterizationStateCreateInfo rasterizer = {vk::PipelineRasterizationStateCreateFlags(), VK_FALSE,
 														   VK_FALSE, vk::PolygonMode::eFill, vk::CullModeFlagBits::eBack,
-														   vk::FrontFace::eClockwise, VK_FALSE, 0, 0, 0, 1.0};
+														   vk::FrontFace::eCounterClockwise, VK_FALSE, 0, 0, 0, 1.0};
 
 	vk::PipelineMultisampleStateCreateInfo multisampling = {vk::PipelineMultisampleStateCreateFlags(), vk::SampleCountFlagBits::e1,
 															VK_FALSE, 1.0f, nullptr, VK_FALSE, VK_FALSE};
@@ -407,13 +439,17 @@ void urcan::UrcanInstance::createGraphicsPipeline() {
 	vk::PipelineColorBlendStateCreateInfo colorBlending = {vk::PipelineColorBlendStateCreateFlags(), VK_FALSE,
 														   vk::LogicOp::eCopy, 1, &colorBlendAttachment};
 
-	vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
+	vk::DescriptorSetLayout setLayouts[] = {_descriptorSetLayout};
+	vk::PipelineLayoutCreateInfo pipelineLayoutInfo = {vk::PipelineLayoutCreateFlags(), 1, setLayouts};
 	if (_device.get().createPipelineLayout(&pipelineLayoutInfo, nullptr, _pipelineLayout.replace()) != vk::Result::eSuccess) {
 		throw std::runtime_error("failed to create pipeline layout!");
 	}
 
+	vk::PipelineDepthStencilStateCreateInfo depthStencil = {vk::PipelineDepthStencilStateCreateFlags(), VK_TRUE, VK_TRUE,
+															vk::CompareOp::eLess, VK_FALSE, VK_FALSE, {}, {}, 0.0f, 1.0f};
+
 	vk::GraphicsPipelineCreateInfo pipelineInfo = {vk::PipelineCreateFlags(), 2, shaderStages, &vertexInputInfo, &inputAssembly, nullptr, &viewportState, &rasterizer,
-												   &multisampling, nullptr, &colorBlending, nullptr, _pipelineLayout, _renderPass, 0, VK_NULL_HANDLE, -1};
+												   &multisampling, &depthStencil, &colorBlending, nullptr, _pipelineLayout, _renderPass, 0, VK_NULL_HANDLE, -1};
 
 	if (_device.get().createGraphicsPipelines(VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, _graphicsPipeline.replace()) != vk::Result::eSuccess) {
 		throw std::runtime_error("failed to create graphics pipeline!");
@@ -438,26 +474,37 @@ void urcan::UrcanInstance::createRenderPass() {
 												 vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare,
 												 vk::ImageLayout::eUndefined, vk::ImageLayout::ePresentSrcKHR};
 	vk::AttachmentReference colorAttachmentRef = {0, vk::ImageLayout::eColorAttachmentOptimal};
+
+	vk::AttachmentDescription depthAttachment = {vk::AttachmentDescriptionFlags(), findDepthFormat(), vk::SampleCountFlagBits::e1,
+												 vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eDontCare,
+												 vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare,
+												 vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal};
+	vk::AttachmentReference depthAttachmentRef = {1, vk::ImageLayout::eDepthStencilAttachmentOptimal};
+
+
 	vk::SubpassDescription subpass = {vk::SubpassDescriptionFlags(), vk::PipelineBindPoint::eGraphics, 0, nullptr, 1, &colorAttachmentRef};
+	subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
 	vk::SubpassDependency dependency = {VK_SUBPASS_EXTERNAL, 0, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eColorAttachmentOutput,
 										vk::AccessFlags(), vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite};
 
-	vk::RenderPassCreateInfo renderPassInfo = {vk::RenderPassCreateFlags(), 1, &colorAttachment, 1, &subpass, 1, &dependency};
+	std::array<vk::AttachmentDescription, 2> attachments = {colorAttachment, depthAttachment};
+	vk::RenderPassCreateInfo renderPassInfo = {vk::RenderPassCreateFlags(), attachments.size(), attachments.data(), 1, &subpass, 1, &dependency};
 	if (_device.get().createRenderPass(&renderPassInfo, nullptr, _renderPass.replace()) != vk::Result::eSuccess) {
 		throw std::runtime_error("failed to create render pass!");
 	}
 }
 
 void urcan::UrcanInstance::createFramebuffers() {
+	_swapChainFramebuffers.clear();
 	for (size_t i = 0; i < _swapChainImageViews.size(); i++)
 		_swapChainFramebuffers.push_back(VDeleterExtended<vk::Framebuffer, vk::FramebufferDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> {_device});
 	for (size_t i = 0; i < _swapChainImageViews.size(); i++) {
-		vk::ImageView attachments[] = {
-				_swapChainImageViews[i].get()
+		std::array<vk::ImageView, 2> attachments = {
+				_swapChainImageViews[i],
+				_depthImageView
 		};
-
-		vk::FramebufferCreateInfo framebufferInfo = {vk::FramebufferCreateFlags(), _renderPass, 1, attachments, _swapChainExtent.width, _swapChainExtent.height, 1};
+		vk::FramebufferCreateInfo framebufferInfo = {vk::FramebufferCreateFlags(), _renderPass, attachments.size(), attachments.data(), _swapChainExtent.width, _swapChainExtent.height, 1};
 
 		if (_device.get().createFramebuffer(&framebufferInfo, nullptr, _swapChainFramebuffers[i].replace()) != vk::Result::eSuccess) {
 			throw std::runtime_error("failed to create framebuffer!");
@@ -475,6 +522,10 @@ void urcan::UrcanInstance::createCommandPool() {
 }
 
 void urcan::UrcanInstance::createCommandBuffers() {
+	if (_commandBuffers.size() > 0) {
+		_device.get().freeCommandBuffers(_commandPool, _commandBuffers.size(), _commandBuffers.data());
+	}
+
 	_commandBuffers.resize(_swapChainFramebuffers.size());
 	vk::CommandBufferAllocateInfo allocInfo = {_commandPool, vk::CommandBufferLevel::ePrimary, static_cast<uint32_t>(_commandBuffers.size())};
 
@@ -487,11 +538,18 @@ void urcan::UrcanInstance::createCommandBuffers() {
 		_commandBuffers[i].begin(&beginInfo);
 
 		const std::array<float, 4> clearColorTmp {0.0f, 0.0f, 0.0f, 1.0f};
-		vk::ClearValue clearColor (clearColorTmp);
-		vk::RenderPassBeginInfo renderPassInfo = {_renderPass, _swapChainFramebuffers[i], {{0, 0}, _swapChainExtent}, 1, &clearColor};
+		std::array<vk::ClearValue, 2> clearValues;
+		clearValues[0].color = clearColorTmp;
+		clearValues[1].setDepthStencil({1.0f, 0});
+		vk::RenderPassBeginInfo renderPassInfo = {_renderPass, _swapChainFramebuffers[i], {{0, 0}, _swapChainExtent}, clearValues.size(), clearValues.data()};
 		_commandBuffers[i].beginRenderPass(&renderPassInfo, vk::SubpassContents::eInline);
 		_commandBuffers[i].bindPipeline(vk::PipelineBindPoint::eGraphics, _graphicsPipeline);
-		_commandBuffers[i].draw(3, 1, 0, 0);
+		vk::Buffer vertexBuffers[] = {_vertexBuffer};
+		vk::DeviceSize offsets[] = {0};
+		_commandBuffers[i].bindVertexBuffers(0, 1, vertexBuffers, offsets);
+		_commandBuffers[i].bindIndexBuffer(_indexBuffer, 0, vk::IndexType::eUint16);
+		_commandBuffers[i].bindDescriptorSets(vk::PipelineBindPoint::eGraphics, _pipelineLayout, 0, 1, &_descriptorSet, 0, nullptr);
+		_commandBuffers[i].drawIndexed(indices.size(), 1, 0, 0, 0);
 		_commandBuffers[i].endRenderPass();
 		_commandBuffers[i].end();
 	}
@@ -507,8 +565,14 @@ void urcan::UrcanInstance::createSemaphores() {
 
 void urcan::UrcanInstance::drawFrame() {
 	uint32_t imageIndex;
-	_device.get().acquireNextImageKHR(_swapChain, std::numeric_limits<uint64_t>::max(), _imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+	vk::Result result = _device.get().acquireNextImageKHR(_swapChain, std::numeric_limits<uint64_t>::max(), _imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 
+	if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) {
+		recreateSwapChain();
+		return;
+	} else if (result != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to acquire swap chain image!");
+	}
 
 	vk::Semaphore waitSemaphores[] = {_imageAvailableSemaphore};
 	vk::PipelineStageFlags waitStages[] = {vk::PipelineStageFlagBits::eColorAttachmentOutput};
@@ -526,4 +590,323 @@ void urcan::UrcanInstance::drawFrame() {
 
 void urcan::UrcanInstance::waitIdle() {
 	_device.get().waitIdle();
+}
+
+void urcan::UrcanInstance::recreateSwapChain() {
+	_device.get().waitIdle();
+
+	createSwapChain();
+	createImageViews();
+	createRenderPass();
+	createGraphicsPipeline();
+	createDepthResources();
+	createFramebuffers();
+	createCommandBuffers();
+}
+
+void urcan::UrcanInstance::notifyWindowChange() {
+	this->recreateSwapChain();
+}
+
+void urcan::UrcanInstance::createVertexBuffer() {
+	vk::DeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+	VDeleterExtended<vk::Buffer, vk::BufferDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> stagingBuffer {_device};
+	VDeleterExtended<vk::DeviceMemory, vk::DeviceMemoryDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> stagingBufferMemory {_device};
+	createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferSrc,  vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, stagingBuffer, stagingBufferMemory);
+
+	void* data;
+	_device.get().mapMemory(stagingBufferMemory, 0, bufferSize, static_cast<vk::MemoryMapFlagBits>(0), &data);
+	memcpy(data, vertices.data(), static_cast<size_t>(bufferSize));
+	_device.get().unmapMemory(stagingBufferMemory);
+
+	createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal, _vertexBuffer, _vertexBufferMemory);
+	copyBuffer(stagingBuffer, _vertexBuffer, bufferSize);
+}
+
+void urcan::UrcanInstance::createIndexBuffer() {
+	vk::DeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+	VDeleterExtended<vk::Buffer, vk::BufferDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> stagingBuffer {_device};
+	VDeleterExtended<vk::DeviceMemory, vk::DeviceMemoryDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> stagingBufferMemory {_device};
+	createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferSrc,  vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, stagingBuffer, stagingBufferMemory);
+
+	void* data;
+	_device.get().mapMemory(stagingBufferMemory, 0, bufferSize, static_cast<vk::MemoryMapFlagBits>(0), &data);
+	memcpy(data, indices.data(), static_cast<size_t>(bufferSize));
+	_device.get().unmapMemory(stagingBufferMemory);
+
+	createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal, _indexBuffer, _indexBufferMemory);
+	copyBuffer(stagingBuffer, _indexBuffer, bufferSize);
+}
+
+uint32_t urcan::UrcanInstance::findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) {
+	vk::PhysicalDeviceMemoryProperties memProperties;
+	_physicalDevice.getMemoryProperties(&memProperties);
+
+		for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+			if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+				return i;
+			}
+		}
+
+	throw std::runtime_error("failed to find suitable memory type!");
+}
+
+void urcan::UrcanInstance::createBuffer(vk::DeviceSize size,
+										vk::BufferUsageFlags usage,
+										vk::MemoryPropertyFlags properties,
+										urcan::VDeleterExtended<vk::Buffer, vk::BufferDeleter, urcan::VDeleter<vk::Device, vk::DeviceDeleter>>& buffer,
+										urcan::VDeleterExtended<vk::DeviceMemory, vk::DeviceMemoryDeleter, urcan::VDeleter<vk::Device, vk::DeviceDeleter>>& bufferMemory) {
+	vk::BufferCreateInfo bufferInfo = {vk::BufferCreateFlags(), size, usage, vk::SharingMode::eExclusive};
+	if (_device.get().createBuffer(&bufferInfo, nullptr, buffer.replace()) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to create vertex buffer!");
+	}
+
+	vk::MemoryRequirements memRequirements;
+	_device.get().getBufferMemoryRequirements(buffer, &memRequirements);
+
+	vk::MemoryAllocateInfo allocInfo = {memRequirements.size, findMemoryType(memRequirements.memoryTypeBits, properties)};
+	if (_device.get().allocateMemory(&allocInfo, nullptr, bufferMemory.replace()) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to allocate vertex buffer memory!");
+	}
+	_device.get().bindBufferMemory(buffer, bufferMemory, 0);
+}
+
+void urcan::UrcanInstance::copyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize size) {
+	vk::CommandBufferAllocateInfo allocInfo = {_commandPool, vk::CommandBufferLevel::ePrimary, 1};
+	vk::CommandBuffer commandBuffer;
+	_device.get().allocateCommandBuffers(&allocInfo, &commandBuffer);
+
+	vk::CommandBufferBeginInfo beginInfo = {vk::CommandBufferUsageFlagBits::eOneTimeSubmit};
+	commandBuffer.begin(&beginInfo);
+
+	vk::BufferCopy copyRegion = {0, 0, size};
+	commandBuffer.copyBuffer(srcBuffer, dstBuffer, 1, &copyRegion);
+	commandBuffer.end();
+
+	vk::SubmitInfo submitInfo = {};
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &commandBuffer;
+	_graphicsQueue.submit(1, &submitInfo, VK_NULL_HANDLE);
+	_graphicsQueue.waitIdle();
+	_device.get().freeCommandBuffers(_commandPool, 1, &commandBuffer);
+}
+
+void urcan::UrcanInstance::createDescriptorSetLayout() {
+	vk::DescriptorSetLayoutBinding uboLayoutBinding = {0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex, nullptr};
+	vk::DescriptorSetLayoutCreateInfo layoutInfo = {vk::DescriptorSetLayoutCreateFlags(), 1, &uboLayoutBinding};
+
+	if (_device.get().createDescriptorSetLayout(&layoutInfo, nullptr, _descriptorSetLayout.replace()) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to create descriptor set layout!");
+	}
+}
+
+void urcan::UrcanInstance::createUniformBuffer() {
+	vk::DeviceSize bufferSize = sizeof(UniformBufferObject);
+
+	createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, _uniformStagingBuffer, _uniformStagingBufferMemory);
+	createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal, _uniformBuffer, _uniformBufferMemory);
+}
+
+void urcan::UrcanInstance::updateUniformBuffer() {
+	static auto startTime = std::chrono::high_resolution_clock::now();
+	auto currentTime = std::chrono::high_resolution_clock::now();
+	float time = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count() / 1000.0f;
+	UniformBufferObject ubo;
+	ubo.model = glm::rotate(glm::mat4(), time * glm::radians(90.0f), glm::vec3(0.2f, 0.5f, 1.0f));
+	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.proj = glm::perspective(glm::radians(45.0f), _swapChainExtent.width / static_cast<float>(_swapChainExtent.height), 0.1f, 10.0f);
+	ubo.proj[1][1] *= -1;
+
+	void* data;
+	_device.get().mapMemory(_uniformStagingBufferMemory, 0, sizeof(ubo), static_cast<vk::MemoryMapFlagBits>(0), &data);
+	memcpy(data, &ubo, sizeof(ubo));
+	_device.get().unmapMemory(_uniformStagingBufferMemory);
+
+	copyBuffer(_uniformStagingBuffer, _uniformBuffer, sizeof(ubo));
+}
+
+void urcan::UrcanInstance::createDescriptorPool() {
+	vk::DescriptorPoolSize poolSize = {vk::DescriptorType::eUniformBuffer, 1};
+	vk::DescriptorPoolCreateInfo poolInfo = {vk::DescriptorPoolCreateFlags(), 1, 1, &poolSize};
+	if (_device.get().createDescriptorPool(&poolInfo, nullptr, _descriptorPool.replace()) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to create descriptor pool!");
+	}
+}
+
+void urcan::UrcanInstance::createDescriptorSet() {
+	vk::DescriptorSetLayout layouts[] = {_descriptorSetLayout};
+	vk::DescriptorSetAllocateInfo allocInfo = {_descriptorPool, 1, layouts};
+	if (_device.get().allocateDescriptorSets(&allocInfo, &_descriptorSet) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to allocate descriptor set!");
+	}
+	vk::DescriptorBufferInfo bufferInfo = {_uniformBuffer, 0, sizeof(UniformBufferObject)};
+	vk::WriteDescriptorSet descriptorWrite = {_descriptorSet, 0, 0, 1, vk::DescriptorType::eUniformBuffer, nullptr, &bufferInfo, nullptr};
+	_device.get().updateDescriptorSets(1, &descriptorWrite, 0, nullptr);
+}
+
+void urcan::UrcanInstance::createDepthResources() {
+	vk::Format depthFormat = findDepthFormat();
+	createImage(_swapChainExtent.width, _swapChainExtent.height, depthFormat, vk::ImageTiling::eOptimal,
+				vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::MemoryPropertyFlagBits::eDeviceLocal, _depthImage, _depthImageMemory);
+	createImageView(_depthImage, depthFormat, vk::ImageAspectFlagBits::eDepth,_depthImageView);
+}
+
+vk::Format urcan::UrcanInstance::findSupportedFormat(const std::vector<vk::Format> &candidates, vk::ImageTiling tiling,
+													 vk::FormatFeatureFlags features) {
+	for (vk::Format format : candidates) {
+		vk::FormatProperties props;
+		_physicalDevice.getFormatProperties(format, &props);
+		if (tiling == vk::ImageTiling::eLinear && (props.linearTilingFeatures & features) == features) {
+			return format;
+		} else if (tiling == vk::ImageTiling::eOptimal && (props.optimalTilingFeatures & features) == features) {
+			return format;
+		}
+	}
+
+	throw std::runtime_error("failed to find supported format!");
+}
+
+vk::Format urcan::UrcanInstance::findDepthFormat() {
+	return findSupportedFormat(
+			{vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint},
+			vk::ImageTiling::eOptimal, vk::FormatFeatureFlagBits ::eDepthStencilAttachment
+	);
+}
+
+bool urcan::UrcanInstance::hasStencilComponent(vk::Format format) {
+	return format == vk::Format::eD32SfloatS8Uint || format == vk::Format::eD24UnormS8Uint;
+}
+
+void urcan::UrcanInstance::createImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags,
+										   urcan::VDeleterExtended<vk::ImageView, vk::ImageViewDeleter, urcan::VDeleter<vk::Device, vk::DeviceDeleter>> &imageView) {
+	vk::ImageViewCreateInfo viewInfo = {};
+	viewInfo.image = image;
+	viewInfo.viewType = vk::ImageViewType::e2D;
+	viewInfo.format = format;
+	viewInfo.subresourceRange.aspectMask = aspectFlags;
+	viewInfo.subresourceRange.baseMipLevel = 0;
+	viewInfo.subresourceRange.levelCount = 1;
+	viewInfo.subresourceRange.baseArrayLayer = 0;
+	viewInfo.subresourceRange.layerCount = 1;
+
+	if (_device.get().createImageView(&viewInfo, nullptr, imageView.replace()) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to create texture image view!");
+	}
+}
+
+void urcan::UrcanInstance::createImage(uint32_t width, uint32_t height, vk::Format format, vk::ImageTiling tiling,
+									   vk::ImageUsageFlags usage, vk::MemoryPropertyFlags properties,
+									   urcan::VDeleterExtended<vk::Image, vk::ImageDeleter, urcan::VDeleter<vk::Device, vk::DeviceDeleter>> &image,
+									   urcan::VDeleterExtended<vk::DeviceMemory, vk::DeviceMemoryDeleter, urcan::VDeleter<vk::Device, vk::DeviceDeleter>> &imageMemory) {
+	vk::ImageCreateInfo imageInfo = {};
+	imageInfo.imageType = vk::ImageType::e2D;
+	imageInfo.extent.width = width;
+	imageInfo.extent.height = height;
+	imageInfo.extent.depth = 1;
+	imageInfo.mipLevels = 1;
+	imageInfo.arrayLayers = 1;
+	imageInfo.format = format;
+	imageInfo.tiling = tiling;
+	imageInfo.initialLayout = vk::ImageLayout::ePreinitialized;
+	imageInfo.usage = usage;
+	imageInfo.samples = vk::SampleCountFlagBits::e1;
+	imageInfo.sharingMode = vk::SharingMode::eExclusive;
+
+	if (_device.get().createImage(&imageInfo, nullptr, image.replace()) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to create image!");
+	}
+
+	vk::MemoryRequirements memRequirements;
+	_device.get().getImageMemoryRequirements(image, &memRequirements);
+
+	vk::MemoryAllocateInfo allocInfo = {};
+	allocInfo.allocationSize = memRequirements.size;
+	allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
+
+	if (_device.get().allocateMemory(&allocInfo, nullptr, imageMemory.replace()) != vk::Result::eSuccess) {
+		throw std::runtime_error("failed to allocate image memory!");
+	}
+
+	_device.get().bindImageMemory(image, imageMemory, 0);
+}
+
+void urcan::UrcanInstance::transitionImageLayout(vk::Image image, vk::Format format, vk::ImageLayout oldLayout,
+												 vk::ImageLayout newLayout) {
+	vk::CommandBuffer commandBuffer = beginSingleTimeCommands();
+
+	vk::ImageMemoryBarrier barrier = {};
+	barrier.oldLayout = oldLayout;
+	barrier.newLayout = newLayout;
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.image = image;
+
+	if (newLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
+		barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
+
+		if (hasStencilComponent(format)) {
+			barrier.subresourceRange.aspectMask |= vk::ImageAspectFlagBits::eStencil;
+		}
+	} else {
+		barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+	}
+
+	barrier.subresourceRange.baseMipLevel = 0;
+	barrier.subresourceRange.levelCount = 1;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = 1;
+
+	if (oldLayout == vk::ImageLayout::ePreinitialized && newLayout == vk::ImageLayout::eTransferSrcOptimal) {
+		barrier.srcAccessMask = vk::AccessFlagBits::eHostWrite;
+		barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
+	} else if (oldLayout == vk::ImageLayout::ePreinitialized && newLayout == vk::ImageLayout::eTransferDstOptimal) {
+		barrier.srcAccessMask = vk::AccessFlagBits::eHostWrite;
+		barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+	} else if (oldLayout == vk::ImageLayout::eTransferDstOptimal && newLayout == vk::ImageLayout::eShaderReadOnlyOptimal) {
+		barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+		barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+	} else if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
+		barrier.srcAccessMask = static_cast<vk::AccessFlagBits>(0);
+		barrier.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+	} else {
+		throw std::invalid_argument("unsupported layout transition!");
+	}
+
+	commandBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe,
+								  static_cast<vk::DependencyFlagBits>(0),
+								  0, nullptr,
+								  0, nullptr,
+								  1, &barrier);
+
+	endSingleTimeCommands(commandBuffer);
+}
+
+vk::CommandBuffer urcan::UrcanInstance::beginSingleTimeCommands() {
+	vk::CommandBufferAllocateInfo allocInfo = {};
+	allocInfo.level = vk::CommandBufferLevel::ePrimary;
+	allocInfo.commandPool = _commandPool;
+	allocInfo.commandBufferCount = 1;
+
+	vk::CommandBuffer commandBuffer;
+	_device.get().allocateCommandBuffers(&allocInfo, &commandBuffer);
+
+	vk::CommandBufferBeginInfo beginInfo = {};
+	beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+
+	commandBuffer.begin(&beginInfo);
+
+	return commandBuffer;
+}
+
+void urcan::UrcanInstance::endSingleTimeCommands(vk::CommandBuffer commandBuffer) {
+	commandBuffer.end();
+
+	vk::SubmitInfo submitInfo = {};
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &commandBuffer;
+
+	_graphicsQueue.submit(1, &submitInfo, VK_NULL_HANDLE);
+	_graphicsQueue.waitIdle();
+
+	_device.get().freeCommandBuffers(_commandPool, 1, &commandBuffer);
 }
