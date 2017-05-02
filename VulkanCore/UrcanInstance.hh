@@ -47,6 +47,10 @@ namespace urcan {
 		static GLFWCore _glfwCore;
 
 	private:
+		std::vector<Vertex> _vertices;
+		std::vector<uint32_t> _indices;
+
+	private:
 		VDeleter<vk::Instance, vk::InstanceDeleter> _instance;
 		VCallback _callback;
 		VDeleterExtended<vk::SurfaceKHR, vk::SurfaceKHRDeleter, VDeleter<vk::Instance, vk::InstanceDeleter>> _surface {_instance};
@@ -167,6 +171,12 @@ namespace urcan {
 		void waitIdle();
 		void notifyWindowChange();
 		void updateUniformBuffer();
+
+	public:
+		void setVertices(std::vector<Vertex> const& src);
+		void setIndices(std::vector<uint32_t> const& src);
+		void updateMesh();
+		void updateMesh(std::vector<Vertex> const &srcVertex, std::vector<uint32_t> const &srcIdx);
 
 	public:
 		static UrcanInstance* getOrCreateInstance();
