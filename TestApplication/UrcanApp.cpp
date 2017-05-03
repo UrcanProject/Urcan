@@ -67,22 +67,24 @@ urcan::UrcanApp::~UrcanApp() {
 };*/
 
 void urcan::UrcanApp::mainLoop() {
-	//std::chrono::time_point<std::chrono::system_clock> start, end;
-	FallingSand generator = FallingSand(100, 100, 0, 20, 50);
-	//FallingSand generator = FallingSand(1000, 1000, 0, 100, 2000);
+	std::chrono::time_point<std::chrono::system_clock> start, end;
+	//FallingSand generator = FallingSand(100, 100, 0, 20, 50);
+	const int size = 1000, heightMax = 100;
+
+	FallingSand generator = FallingSand(size, size, 0, heightMax, 50);
 	HeightToVertexConvertor conv;
-	conv.feed(generator.getMap(), -1, -20);
+	conv.feed(generator.getMap(), -1, -size / 2, heightMax);
 	_context->updateMesh(conv.getVertices(), conv.getIndexes());
 	while (!glfwWindowShouldClose(_window)) {
-		//start = std::chrono::system_clock::now();
+		start = std::chrono::system_clock::now();
 		glfwPollEvents();
 		_context->updateUniformBuffer();
 		_context->drawFrame();
-		//end = std::chrono::system_clock::now();
-		/*long long int elapsed_milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
+		end = std::chrono::system_clock::now();
+		long long int elapsed_milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
 		long double fps = 1.0f / (static_cast<long double>(elapsed_milliseconds) / 1000.0f);
 		std::cout << "elapsed time: " << elapsed_milliseconds << "s\n";
-		std::cout << "fps: " << static_cast<int>(fps) << std::endl;*/
+		std::cout << "fps: " << static_cast<int>(fps) << std::endl;
 	}
 	_context->waitIdle();
 }

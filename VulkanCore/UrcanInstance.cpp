@@ -709,7 +709,7 @@ void urcan::UrcanInstance::createUniformBuffer() {
 void urcan::UrcanInstance::updateUniformBuffer() {
 	static auto startTime = std::chrono::high_resolution_clock::now();
 	auto currentTime = std::chrono::high_resolution_clock::now();
-	float time = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count() / 1000.0f;
+	float time = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count() / 10000.0f;
 	UniformBufferObject ubo;
 	ubo.model = glm::rotate(glm::mat4(), time * glm::radians(135.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
