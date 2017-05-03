@@ -75,9 +75,11 @@ const t_color *Color::getColor(unsigned int at) const {
     return ((t_color *)(&this->_image.pixel_data[at * sizeof(t_color)]));
 }
 
-const t_color &Color::getColor(unsigned int min, unsigned int max, unsigned int val) {
+glm::vec3 Color::getColor(unsigned int min, unsigned int max, unsigned int val) {
     unsigned int diff = (unsigned int) (std::abs(max) - std::abs(min));
     double step = this->_image.width / diff;
     unsigned int pos = (unsigned int) (val * step);
-    return (*this->getColor(pos));
+    const t_color *c = this->getColor(pos);
+
+    return glm::vec3({c->argb[0] / 255.0f, c->argb[1] / 255.0f, c->argb[2] / 255.0f});
 }

@@ -3,6 +3,7 @@
 //
 
 #include <iostream>
+#include <Color.hpp>
 #include "HeightToVertexConvertor.hh"
 
 static const std::vector<Vertex> verticesMod = {
@@ -49,6 +50,7 @@ void HeightToVertexConvertor::feed(std::vector<std::vector<uint32_t>> const &hei
 	const double xDiff = abs(startX - heights[0].size()) / 5;
 	const double zDiff = abs(startZ - heights.size()) / 5;
 	const double norm = sqrt(xDiff * xDiff + zDiff * zDiff);
+    Color color;
 	std::vector<glm::vec3> colors;
 
 	this->_vertices.resize(verticesMod.size() * heights.size() * heights[0].size());
@@ -71,7 +73,7 @@ void HeightToVertexConvertor::feed(std::vector<std::vector<uint32_t>> const &hei
 		for (uint32_t x = 0; x < heights[0].size(); x++) {
 			for (uint32_t i = 0; i < verticesMod.size(); i++)
 				this->_vertices[(x + z * heights[z].size()) * verticesMod.size() + i] = {
-						combineVec3(i, x + startX, z + startZ, heights[z][x], norm), colors[heights[z][x]]};
+                        combineVec3(i, x + startX, z + startZ, heights[z][x], norm), color.getColor(0, maxHeight, heights[z][x])};
 			for (uint32_t i = 0; i < indicesMod.size(); i++)
 				this->_indexes[(x + z * heights[z].size()) * indicesMod.size() + i] = (
 						(x + z * heights[z].size()) * verticesMod.size() + indicesMod[i]);

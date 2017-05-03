@@ -5,6 +5,8 @@
 #ifndef VULKAN_COLOR_HPP
 #define VULKAN_COLOR_HPP
 
+#include <glm/vec3.hpp>
+
 typedef union   s_color {
     uint32_t full;
     uint8_t argb[4];
@@ -20,8 +22,9 @@ typedef struct  s_image {
 class Color {
 private:
     static const t_image _image;
+public:
     const t_color *getColor(unsigned int at) const;
-    const t_color &getColor(unsigned int min, unsigned int max, unsigned int val);
+    glm::vec3 getColor(unsigned int min, unsigned int max, unsigned int val);
 public:
 };
 
