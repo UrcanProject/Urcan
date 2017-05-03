@@ -6,6 +6,7 @@
 #include <chrono>
 #include <HeightToVertexConvertor.hh>
 #include "UrcanApp.hh"
+#include "FallingSand.hh"
 #include "BasicConfiguration.hpp"
 /*
 static const std::vector<Vertex> vertices = {
@@ -35,7 +36,7 @@ urcan::UrcanApp::~UrcanApp() {
 
 }
 
-static const std::vector<std::vector<uint32_t>> mapTest = {
+/*static const std::vector<std::vector<uint32_t>> mapTest = {
 		{0, 1, 2, 3, 2, 1, 0, 0, 1, 2, 3, 2, 1, 0,0, 1, 2, 3, 2, 1, 0,0, 1, 2, 3, 2, 1, 0,0, 1, 2, 3, 2, 1, 0},
 		{0, 1, 2, 3, 2, 1, 0, 0, 1, 2, 3, 2, 1, 0,0, 1, 2, 3, 2, 1, 0,0, 1, 2, 3, 2, 1, 0,0, 1, 2, 3, 2, 1, 0},
 		{0, 1, 2, 3, 2, 1, 0, 0, 1, 2, 3, 2, 1, 0,0, 1, 2, 3, 2, 1, 0,0, 1, 2, 3, 2, 1, 0,0, 1, 2, 3, 2, 1, 0},
@@ -63,12 +64,14 @@ static const std::vector<std::vector<uint32_t>> mapTest = {
 		{0, 1, 2, 3, 2, 1, 0, 0, 1, 2, 3, 2, 1, 0,0, 1, 2, 3, 2, 1, 0,0, 1, 2, 3, 2, 1, 0,0, 1, 2, 3, 2, 1, 0},
 		{0, 1, 2, 3, 2, 1, 0, 0, 1, 2, 3, 2, 1, 0,0, 1, 2, 3, 2, 1, 0,0, 1, 2, 3, 2, 1, 0,0, 1, 2, 3, 2, 1, 0},
 		{0, 1, 2, 3, 2, 1, 0, 0, 1, 2, 3, 2, 1, 0,0, 1, 2, 3, 2, 1, 0,0, 1, 2, 3, 2, 1, 0,0, 1, 2, 3, 2, 1, 0},
-};
+};*/
 
 void urcan::UrcanApp::mainLoop() {
 	//std::chrono::time_point<std::chrono::system_clock> start, end;
+	FallingSand generator = FallingSand(100, 100, 0, 20, 50);
+	//FallingSand generator = FallingSand(1000, 1000, 0, 100, 2000);
 	HeightToVertexConvertor conv;
-	conv.feed(mapTest, -1, -20);
+	conv.feed(generator.getMap(), -1, -20);
 	_context->updateMesh(conv.getVertices(), conv.getIndexes());
 	while (!glfwWindowShouldClose(_window)) {
 		//start = std::chrono::system_clock::now();
