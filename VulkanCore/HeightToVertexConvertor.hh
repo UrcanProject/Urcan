@@ -15,7 +15,7 @@ private:
 
 public:
 	void clear();
-	void feed(std::vector<std::vector<uint32_t>> const& heights, int startX, int startZ);
+	void feed(std::vector<std::vector<uint32_t>> const &heights, int startX, int startZ, uint32_t maxHeight);
 
 public:
 	const std::vector<Vertex> &getVertices() const;
