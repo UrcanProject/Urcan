@@ -68,8 +68,8 @@ urcan::UrcanApp::~UrcanApp() {
 
 void urcan::UrcanApp::mainLoop() {
 	std::chrono::time_point<std::chrono::system_clock> start, end;
-	FallingSand generator = FallingSand(50, 50, 0, 10, 20);
-	const int size = 50, heightMax = 10;
+    const int size = 300, heightMax = 40;
+    FallingSand generator = FallingSand(size, size, 0, heightMax, 10, 0.35);
 
 	//FallingSand generator = FallingSand(size, size, 0, heightMax, 50);
 	HeightToVertexConvertor conv;
