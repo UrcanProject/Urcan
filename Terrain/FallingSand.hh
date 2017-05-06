@@ -14,12 +14,13 @@ private:
     unsigned int _minHeight;
     unsigned int _maxHeight;
     unsigned int _density;
+    float _dispertionProba;
     std::vector<std::vector<unsigned int>> _map;
 
 public:
     FallingSand(unsigned int width, unsigned int height,
                 unsigned int minHeight, unsigned int maxHeight,
-                unsigned int density);
+                unsigned int density, float dispertion_proba_percent);
     void fall(unsigned int x, unsigned int y, unsigned int height);
     void dump() const;
     const std::vector<std::vector<unsigned int>> &getMap() const;
