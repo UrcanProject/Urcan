@@ -81,10 +81,10 @@ void urcan::UrcanApp::mainLoop() {
 		_context->updateUniformBuffer();
 		_context->drawFrame();
 		end = std::chrono::system_clock::now();
-		long long int elapsed_milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
-		long double fps = 1.0f / (static_cast<long double>(elapsed_milliseconds) / 1000.0f);
-		std::cout << "elapsed time: " << elapsed_milliseconds << "s\n";
-		std::cout << "fps: " << static_cast<int>(fps) << std::endl;
+		//long long int elapsed_milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
+		//long double fps = 1.0f / (static_cast<long double>(elapsed_milliseconds) / 1000.0f);
+		//std::cout << "elapsed time: " << elapsed_milliseconds << "s\n";
+		//std::cout << "fps: " << static_cast<int>(fps) << std::endl;
 	}
 	_context->waitIdle();
 }

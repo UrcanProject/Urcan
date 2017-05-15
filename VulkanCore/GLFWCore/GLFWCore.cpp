@@ -3,12 +3,24 @@
 //
 
 #include <UrcanInstance.hh>
+#include <Camera.hh>
+#include <synchapi.h>
 #include "BasicConfiguration.hpp"
 #include "GLFWCore.hh"
 
 static void keyCallback(GLFWwindow* window, int key, int, int action, int) {
-	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+		std::cout << "HELLO" << std::endl;
 		glfwSetWindowShouldClose(window, 1);
+	}
+	if (key == GLFW_KEY_Q) {
+		std::cout << "HELLO" << std::endl;
+		Camera::getInstance()->rotate({1.0, 0.0, 0.0});
+	}
+	if (key == GLFW_KEY_S)
+		Camera::getInstance()->rotate({0.0, 1.0, 0.0});
+	if (key == GLFW_KEY_D)
+		Camera::getInstance()->rotate({0.0, 0.0, 1.0});
 }
 
 urcan::GLFWCore::GLFWCore() {

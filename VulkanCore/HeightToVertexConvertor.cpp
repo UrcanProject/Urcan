@@ -33,9 +33,11 @@ void HeightToVertexConvertor::clear() {
 }
 
 glm::vec3 combineVec3(int32_t idx, int32_t x, int32_t y, int32_t z, double norm) {
-	return {(verticesMod[idx].pos[0] + x) / norm - 1.5,
-			(verticesMod[idx].pos[1] + y) / norm,
-			(verticesMod[idx].pos[2] + z) / norm};
+	const uint32_t mod = 100;
+
+	return {(verticesMod[idx].pos[0] + x + mod) / norm - 1.5,
+			(verticesMod[idx].pos[1] + y + mod) / norm,
+			(verticesMod[idx].pos[2] + z + mod) / norm};
 }
 
 /**
