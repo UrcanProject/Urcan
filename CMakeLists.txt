@@ -8,12 +8,15 @@ link_directories(./lib/GLFW/lib-mingw lib/1.0.46.0/Lib32)
 
 set(CMAKE_CXX_STANDARD 14)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -W -Wall -Wextra")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wall -Wextra -O3 -Ofast")
 
 set(SOURCE_FILES main.cpp VulkanCore/BasicConfiguration.hpp VulkanCore/UrcanInstance.cpp VulkanCore/UrcanInstance.hh
         ClassUtils/ScopeLock.cpp ClassUtils/ScopeLock.hh TestApplication/UrcanApp.cpp TestApplication/UrcanApp.hh
         VulkanCore/VDeleter.hpp VulkanCore/VCallback.cpp VulkanCore/VCallback.hh VulkanCore/GLFWCore/GLFWCore.cpp
         VulkanCore/GLFWCore/GLFWCore.hh ClassUtils/Utils.cpp ClassUtils/Utils.h Patterns/Singleton.hpp
+        VulkanCore/Buffers/Vertex.cpp VulkanCore/Buffers/Vertex.hh VulkanCore/Buffers/UniformBufferObject.cpp
+        VulkanCore/Buffers/UniformBufferObject.hh VulkanCore/HeightToVertexConvertor.cpp VulkanCore/HeightToVertexConvertor.hh
+        Terrain/FallingSand.hh Terrain/FallingSand.cpp ClassUtils/Color.cpp ClassUtils/Color.hpp VulkanCore/Camera.cpp VulkanCore/Camera.hh)
         VulkanCore/Buffers/Vertex.cpp VulkanCore/Buffers/Vertex.hh VulkanCore/Buffers/UniformBufferObject.cpp VulkanCore/Buffers/UniformBufferObject.hh VulkanCore/HeightToVertexConvertor.cpp VulkanCore/HeightToVertexConvertor.hh Terrain/FallingSand.hh Terrain/FallingSand.cpp ClassUtils/Color.cpp ClassUtils/Color.hpp ClassUtils/FastRand.cpp ClassUtils/FastRand.hpp)
 add_executable(Vulkan ${SOURCE_FILES})
 

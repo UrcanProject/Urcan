@@ -13,6 +13,7 @@
 #include "UrcanInstance.hh"
 #include "Utils.h"
 #include "Buffers/UniformBufferObject.hh"
+#include "Camera.hh"
 
 std::mutex urcan::UrcanInstance::_instanceMutex;
 bool urcan::UrcanInstance::_fullyInitialized = false;
@@ -706,13 +707,21 @@ void urcan::UrcanInstance::createUniformBuffer() {
 	createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal, _uniformBuffer, _uniformBufferMemory);
 }
 
+#include <Camera.hh>
+
 void urcan::UrcanInstance::updateUniformBuffer() {
-	static auto startTime = std::chrono::high_resolution_clock::now();
-	auto currentTime = std::chrono::high_resolution_clock::now();
-	float time = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count() / 10000.0f;
+	//static auto startTime = std::chrono::high_resolution_clock::now();
+	//auto currentTime = std::chrono::high_resolution_clock::now();
+	//float time = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count() / 10000.0f;
 	UniformBufferObject ubo;
-	ubo.model = glm::rotate(glm::mat4(), time * glm::radians(135.0f), glm::vec3(0.0f, 0.0f, 1.0f)) *
-			glm::rotate(glm::mat4(), static_cast<float>(sin(2 * time * glm::radians(135.0f))), glm::vec3(0.0f, 1.0f, 0.0f));
+	ubo.model = glm::mat4();
+
+	std::cout << "State of rot : " << Camera::getInstance()->rotation.x << " " << Camera::getInstance()->rotation.y << " " << Camera::getInstance()->rotation.z << std::endl;
+
+	ubo.model = glm::rotate(ubo.model, glm::radians(Camera::getInstance()->rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+	ubo.model = glm::rotate(ubo.model, glm::radians(Camera::getInstance()->rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+	ubo.model = glm::rotate(ubo.model, glm::radians(Camera::getInstance()->rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+	//ubo.model = glm::rotate(glm::mat4(), time * glm::radians(135.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	ubo.proj = glm::perspective(glm::radians(45.0f), _swapChainExtent.width / static_cast<float>(_swapChainExtent.height), 0.1f, 10.0f);
 	ubo.proj[1][1] *= -1;
