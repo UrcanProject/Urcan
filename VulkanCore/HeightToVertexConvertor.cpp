@@ -35,7 +35,7 @@ void HeightToVertexConvertor::clear() {
 glm::vec3 combineVec3(int32_t idx, int32_t x, int32_t y, int32_t z, double norm) {
 	return {(verticesMod[idx].pos[0] + x) / norm - 1.5,
 			(verticesMod[idx].pos[1] + y) / norm,
-			(verticesMod[idx].pos[2] + z) / norm};
+			(verticesMod[idx].pos[2] + z) / norm - 1};
 }
 
 /**
@@ -49,7 +49,7 @@ glm::vec3 combineVec3(int32_t idx, int32_t x, int32_t y, int32_t z, double norm)
 void HeightToVertexConvertor::feed(std::vector<std::vector<uint32_t>> const &heights, int startX, int startZ, uint32_t maxHeight) {
 	const double xDiff = abs(startX - heights[0].size()) / 5;
 	const double zDiff = abs(startZ - heights.size()) / 5;
-	const double norm = sqrt(xDiff * xDiff + zDiff * zDiff);
+	const double norm = sqrt(xDiff * xDiff + zDiff * zDiff + maxHeight * maxHeight);
     Color color;
 	std::vector<glm::vec3> colors;
 
