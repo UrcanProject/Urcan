@@ -48,7 +48,6 @@ FallingSand::FallingSand(unsigned int width, unsigned int height,
         this->_map.at(i).resize(this->_width);
     }
 
-    std::srand(static_cast<unsigned int>(std::time(nullptr)));
     for (unsigned int i = 0 ; i < this->_density ; i++) {
         this->fall(FastRand::fastRand() % this->_width, FastRand::fastRand() % this->_height, (FastRand::fastRand() % this->_maxHeight + 1) + this->_minHeight);
     }
@@ -56,4 +55,28 @@ FallingSand::FallingSand(unsigned int width, unsigned int height,
 
 const std::vector<std::vector<unsigned int>> &FallingSand::getMap() const {
     return (this->_map);
+}
+
+uint32_t FallingSand::getHighestHeight() const {
+    uint32_t biggest = this->_minHeight;
+
+    for (unsigned int y = 0 ; y < this->_height ; ++y) {
+        for (unsigned int x = 0; x < this->_width; ++x) {
+            if (this->_map[y][x] > biggest)
+                biggest = this->_map[y][x];
+        }
+    }
+    return (biggest);
+}
+
+uint32_t FallingSand::getLowestHeight() const {
+    uint32_t lowest = static_cast<uint32_t>(-1);
+
+    for (unsigned int y = 0 ; y < this->_height ; ++y) {
+        for (unsigned int x = 0; x < this->_width; ++x) {
+            if (this->_map[y][x] < lowest)
+                lowest = this->_map[y][x];
+        }
+    }
+    return (lowest);
 }

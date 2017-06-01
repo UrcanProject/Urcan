@@ -5,8 +5,8 @@
 #ifndef VULKAN_HEIGHTTOVERTEXCONVERTOR_HH
 #define VULKAN_HEIGHTTOVERTEXCONVERTOR_HH
 
-#include <Buffers/Vertex.hh>
 #include <vector>
+#include "Vertex.hh"
 
 class HeightToVertexConvertor {
 private:
@@ -15,7 +15,7 @@ private:
 
 public:
 	void clear();
-	void feed(std::vector<std::vector<uint32_t>> const &heights, int startX, int startZ, uint32_t maxHeight);
+	void feed(std::vector<std::vector<uint32_t>> const &heights, int startX, int startZ, uint32_t minHeight, uint32_t maxHeight);
 
 public:
 	const std::vector<Vertex> &getVertices() const;

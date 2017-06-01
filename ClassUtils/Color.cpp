@@ -76,9 +76,9 @@ const t_color *Color::getColor(unsigned int at) const {
 }
 
 glm::vec3 Color::getColor(unsigned int min, unsigned int max, unsigned int val) {
-    unsigned int diff = (unsigned int) (std::abs(max) - std::abs(min));
-    double step = this->_image.width / diff;
-    unsigned int pos = (unsigned int) (val * step);
+    unsigned int diff = static_cast<unsigned int>(std::abs(max) - std::abs(min));
+    double step = static_cast<double>(this->_image.width / diff);
+    unsigned int pos = static_cast<unsigned int>((std::abs(val - min)) * step);
     const t_color *c = this->getColor(pos);
 
     return glm::vec3({c->argb[0] / 255.0f, c->argb[1] / 255.0f, c->argb[2] / 255.0f});

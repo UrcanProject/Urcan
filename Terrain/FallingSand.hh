@@ -24,6 +24,8 @@ public:
     void fall(unsigned int x, unsigned int y, unsigned int height);
     void dump() const;
     const std::vector<std::vector<unsigned int>> &getMap() const;
+    uint32_t getHighestHeight() const;
+    uint32_t getLowestHeight() const;
 
 };
 
