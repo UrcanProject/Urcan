@@ -5,6 +5,7 @@
 #include <ctime>
 #include <cstdlib>
 #include <iostream>
+#include "FastRand.hpp"
 #include "FallingSand.hh"
 
 void FallingSand::fall(unsigned int x, unsigned int y, unsigned int height) {
@@ -13,10 +14,10 @@ void FallingSand::fall(unsigned int x, unsigned int y, unsigned int height) {
             if (y < this->_height) {
                 if (this->_map[y][x] < height) {
                     this->_map[y][x] = height;
-                    fall(x, y - 1, ((std::rand() % 1000) < (this->_dispertionProba) * 1000.0) + height - 1);
-                    fall(x + 1, y, ((std::rand() % 1000) < (this->_dispertionProba) * 1000.0) + height - 1);
-                    fall(x - 1, y, ((std::rand() % 1000) < (this->_dispertionProba) * 1000.0) + height - 1);
-                    fall(x, y + 1, ((std::rand() % 1000) < (this->_dispertionProba) * 1000.0) + height - 1);
+                    fall(x, y - 1, ((FastRand::fastRand() % 1000) < (this->_dispertionProba) * 1000.0) + height - 1);
+                    fall(x + 1, y, ((FastRand::fastRand() % 1000) < (this->_dispertionProba) * 1000.0) + height - 1);
+                    fall(x - 1, y, ((FastRand::fastRand() % 1000) < (this->_dispertionProba) * 1000.0) + height - 1);
+                    fall(x, y + 1, ((FastRand::fastRand() % 1000) < (this->_dispertionProba) * 1000.0) + height - 1);
                 }
             }
         }
@@ -49,7 +50,7 @@ FallingSand::FallingSand(unsigned int width, unsigned int height,
 
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
     for (unsigned int i = 0 ; i < this->_density ; i++) {
-        this->fall(rand() % this->_width, rand() % this->_height, (rand() % this->_maxHeight + 1) + this->_minHeight);
+        this->fall(FastRand::fastRand() % this->_width, FastRand::fastRand() % this->_height, (FastRand::fastRand() % this->_maxHeight + 1) + this->_minHeight);
     }
 }
 
