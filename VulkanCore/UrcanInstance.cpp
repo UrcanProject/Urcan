@@ -141,6 +141,7 @@ void urcan::UrcanInstance::setupDebugCallback() {
 
 void urcan::UrcanInstance::pickPhysicalDevice() {
 	uint32_t deviceCount = 0;
+	bool deviceFound = false;
 	_instance.get().enumeratePhysicalDevices(&deviceCount, nullptr);
 	if (deviceCount == 0) {
 		throw std::runtime_error("failed to find GPUs with Vulkan support!");
@@ -150,11 +151,12 @@ void urcan::UrcanInstance::pickPhysicalDevice() {
 	for (const auto &device : devices) {
 		if (isDeviceSuitable(device)) {
 			_physicalDevice = device;
+			deviceFound = true;
 			break;
 		}
 	}
 
-	if (_physicalDevice == nullptr) {
+	if (!deviceFound) {
 		throw std::runtime_error("failed to find a suitable GPU!");
 	}
 }
