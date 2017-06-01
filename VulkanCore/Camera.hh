@@ -23,10 +23,10 @@ private:
 
 public:
 	enum CameraType { lookat, firstperson };
-	CameraType type = CameraType::lookat;
+	CameraType type = CameraType::firstperson;
 
-	glm::vec3 rotation = glm::vec3(256.0f, 190.0f, 210.0f);
-	glm::vec3 position = glm::vec3(1.09396, 0.59689, -1.24638);
+	glm::vec3 rotation = glm::vec3();
+	glm::vec3 position = glm::vec3();
 
 	float rotationSpeed = 1.0f;
 	float movementSpeed = 1.0f;
