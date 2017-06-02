@@ -8,6 +8,17 @@ void Camera::updateViewMatrix() {
 	glm::mat4 rotM = glm::mat4();
 	glm::mat4 transM;
 
+	if (rotation.x > 360.0)
+	rotation.x = (int)rotation.x % 360;
+	if (rotation.y > 360.0)
+	rotation.y = (int)rotation.y % 360;
+	if (rotation.z > 360.0)
+	rotation.z = (int)rotation.z % 360;
+
+	//rotation.x = 0;
+	//rotation.y = 0;
+	rotation.z = 270;
+
 	rotM = glm::rotate(rotM, glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
 	rotM = glm::rotate(rotM, glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
 	rotM = glm::rotate(rotM, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));

@@ -32,20 +32,12 @@ void HeightToVertexConvertor::clear() {
 }
 
 glm::vec3 combineVec3(int32_t idx, int32_t x, int32_t y, int32_t z, double norm) {
-	const uint32_t mod = 100;
+	const uint32_t mod = 0;
 
-	return {(verticesMod[idx].pos[0] + x + mod) / norm - 1.5,
-			(verticesMod[idx].pos[1] + y + mod) / norm,
-			(verticesMod[idx].pos[2] + z + mod) / norm - 1};
+	return {(verticesMod[idx].pos[0] + x + mod) ,
+			(verticesMod[idx].pos[1] + y + mod) ,
+			(verticesMod[idx].pos[2] + z + mod) };
 }
-
-/**
- * [127, 0, 0]
- * [127, 127, 0]
- * [0, 127, 0]
- * [0, 127, 127]
- * [0, 0, 127]
- */
 
 void HeightToVertexConvertor::feed(std::vector<std::vector<uint32_t>> const &heights, int startX, int startZ, uint32_t minHeight, uint32_t maxHeight) {
 	const double xDiff = abs(startX - heights[0].size()) / 5;
