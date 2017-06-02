@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.7)
 project(Vulkan)
 
 include_directories(./lib/glm ./lib/GLFW/include lib/1.0.46.0/Include ClassUtils VulkanCore
-        TestApplication VulkanCore/GLFWCore Patterns Terrain)
+        TestApplication VulkanCore/GLFWCore Patterns Terrain VulkanCore/Buffers)
 
 link_directories(./lib/GLFW/lib-mingw lib/1.0.46.0/Lib32)
 

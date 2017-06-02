@@ -153,7 +153,7 @@ void urcan::UrcanInstance::pickPhysicalDevice() {
 		}
 	}
 
-	if (_physicalDevice == VK_NULL_HANDLE) {
+	if (_physicalDevice == nullptr) {
 		throw std::runtime_error("failed to find a suitable GPU!");
 	}
 }
@@ -346,7 +346,7 @@ void urcan::UrcanInstance::createSwapChain() {
 											 vk::SharingMode::eExclusive, 0, nullptr,
 											 swapChainSupport.capabilities.currentTransform,
 											 vk::CompositeAlphaFlagBitsKHR::eOpaque, presentMode, VK_TRUE,
-											 VK_NULL_HANDLE};
+											 nullptr};
 
 	QueueFamilyIndices indices = findQueueFamilies(_physicalDevice);
 	uint32_t queueFamilyIndices[] = {static_cast<uint32_t>(indices.graphicsFamily),
@@ -448,9 +448,9 @@ void urcan::UrcanInstance::createGraphicsPipeline() {
 															vk::CompareOp::eLess, VK_FALSE, VK_FALSE, {}, {}, 0.0f, 1.0f};
 
 	vk::GraphicsPipelineCreateInfo pipelineInfo = {vk::PipelineCreateFlags(), 2, shaderStages, &vertexInputInfo, &inputAssembly, nullptr, &viewportState, &rasterizer,
-												   &multisampling, &depthStencil, &colorBlending, nullptr, _pipelineLayout, _renderPass, 0, VK_NULL_HANDLE, -1};
+												   &multisampling, &depthStencil, &colorBlending, nullptr, _pipelineLayout, _renderPass, 0, nullptr, -1};
 
-	if (_device.get().createGraphicsPipelines(VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, _graphicsPipeline.replace()) != vk::Result::eSuccess) {
+	if (_device.get().createGraphicsPipelines(nullptr, 1, &pipelineInfo, nullptr, _graphicsPipeline.replace()) != vk::Result::eSuccess) {
 		throw std::runtime_error("failed to create graphics pipeline!");
 	}
 }
@@ -564,7 +564,7 @@ void urcan::UrcanInstance::createSemaphores() {
 
 void urcan::UrcanInstance::drawFrame() {
 	uint32_t imageIndex;
-	vk::Result result = _device.get().acquireNextImageKHR(_swapChain, std::numeric_limits<uint64_t>::max(), _imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+	vk::Result result = _device.get().acquireNextImageKHR(_swapChain, std::numeric_limits<uint64_t>::max(), _imageAvailableSemaphore, nullptr, &imageIndex);
 
 	if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) {
 		recreateSwapChain();
@@ -578,7 +578,7 @@ void urcan::UrcanInstance::drawFrame() {
 	vk::Semaphore signalSemaphores[] = {_renderFinishedSemaphore};
 
 	vk::SubmitInfo submitInfo = {1, waitSemaphores, waitStages, 1, &_commandBuffers[imageIndex], 1, signalSemaphores};
-	if (_graphicsQueue.submit(1, &submitInfo, VK_NULL_HANDLE) != vk::Result::eSuccess) {
+	if (_graphicsQueue.submit(1, &submitInfo, nullptr) != vk::Result::eSuccess) {
 		throw std::runtime_error("failed to submit draw command buffer!");
 	}
 
@@ -685,7 +685,7 @@ void urcan::UrcanInstance::copyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer
 	vk::SubmitInfo submitInfo = {};
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &commandBuffer;
-	_graphicsQueue.submit(1, &submitInfo, VK_NULL_HANDLE);
+	_graphicsQueue.submit(1, &submitInfo, nullptr);
 	_graphicsQueue.waitIdle();
 	_device.get().freeCommandBuffers(_commandPool, 1, &commandBuffer);
 }
@@ -905,7 +905,7 @@ void urcan::UrcanInstance::endSingleTimeCommands(vk::CommandBuffer commandBuffer
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &commandBuffer;
 
-	_graphicsQueue.submit(1, &submitInfo, VK_NULL_HANDLE);
+	_graphicsQueue.submit(1, &submitInfo, nullptr);
 	_graphicsQueue.waitIdle();
 
 	_device.get().freeCommandBuffers(_commandPool, 1, &commandBuffer);
