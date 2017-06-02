@@ -20,7 +20,7 @@ std::unordered_map<int, bool> keyHold = {
 
 static std::ostream &operator<<(std::ostream &s, glm::vec3 v) {
     glm::vec3 disp = v;
-    double lim = 0.0000001f;
+    double lim = 0.00001f;
     if (disp.x > -lim && disp.x < lim)
         disp.x = 0;
     if (disp.y > -lim && disp.y < lim)
@@ -48,36 +48,33 @@ static void keyCallback(GLFWwindow *window, int key, int, int action, int) {
 		Camera::getInstance()->rotate({-45.0, 0.0, 0.0});
 	if (key == GLFW_KEY_K && action == GLFW_PRESS)
 		Camera::getInstance()->rotate({0.0, 0.0, -45.0});
-
-
-
-
-	//glm::rotate();
 }
 
 static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 {
-    static double oldX = -1;
-    static double oldY = -1;
+	static bool updated = false;
+    static const double xInitPos = urcan::WIDTH / 2;
+    static const double yInitPos = urcan::HEIGHT / 2;
 	const double rotFac = 0.1;
-	double deltaY = fabs(ypos - oldY);
-	double deltaX = fabs(xpos - oldX);
+	double deltaY = fabs(ypos - yInitPos);
+	double deltaX = fabs(xpos - xInitPos);
 
-	std::cout << "Old " << oldX << " " << oldY << std::endl;
-	std::cout << "Received " << xpos << " " << ypos << std::endl;
-
-	if (oldX > 0.0 && oldY > 0.0) {
-		if (ypos < oldY)
-			Camera::getInstance()->rotate({rotateSpeed * rotFac * deltaY, 0.0, 0.0});
-		if (ypos > oldY)
-			Camera::getInstance()->rotate({-rotateSpeed * rotFac * deltaY, 0.0, 0.0});
-		if (xpos < oldX)
-			Camera::getInstance()->rotate({0.0, 0.0, rotateSpeed * rotFac * deltaX});
-		if (xpos > oldX)
-			Camera::getInstance()->rotate({0.0, 0.0, -rotateSpeed * rotFac * deltaX});
+	if (updated) {
+		if (xInitPos > 0.0 && yInitPos > 0.0) {
+			if (ypos < yInitPos)
+				Camera::getInstance()->rotate({rotateSpeed * rotFac * deltaY, 0.0, 0.0});
+			if (ypos > yInitPos)
+				Camera::getInstance()->rotate({-rotateSpeed * rotFac * deltaY, 0.0, 0.0});
+			if (xpos < xInitPos)
+				Camera::getInstance()->rotate({0.0, 0.0, rotateSpeed * rotFac * deltaX});
+			if (xpos > xInitPos)
+				Camera::getInstance()->rotate({0.0, 0.0, -rotateSpeed * rotFac * deltaX});
+		}
+	} else {
+		updated = true;
 	}
-	oldX = xpos;
-	oldY = ypos;
+
+	glfwSetCursorPos(window, xInitPos, yInitPos);
 }
 
 void urcan::GLFWCore::moveTurn()
