@@ -11,7 +11,7 @@
 
 namespace urcan
 {
-	class UrcanApp {
+	class UrcanApp : public Singleton<UrcanApp> {
 	private:
 		UrcanInstance* _context;
 		GLFWwindow* _window;
@@ -22,7 +22,6 @@ namespace urcan
 		static const float _dispersion;
 		FallingSand _mapGenerator;
 
-	private:
 		void mainLoop();
 		void initApp();
 
@@ -32,7 +31,7 @@ namespace urcan
 
 	public:
 		void run();
-
+		const FallingSand &getMapGenerator() const;
 	};
 }
 
