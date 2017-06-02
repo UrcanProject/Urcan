@@ -3,9 +3,11 @@
 //
 
 #include <synchapi.h>
+#include "Collision.hpp"
 #include "BasicConfiguration.hpp"
 #include "GLFWCore.hh"
 #include "Camera.hh"
+#include "UrcanApp.hh"
 #include "UrcanInstance.hh"
 
 static std::ostream &operator<<(std::ostream &s, glm::vec3 v) {
@@ -63,7 +65,7 @@ static void keyCallback(GLFWwindow *window, int key, int, int action, int) {
 	}
 	if (key == GLFW_KEY_DOWN) {
 		trans = camFront * moveSpeed;
-		Camera::getInstance()->translate(camFront * moveSpeed);
+		//Camera::getInstance()->translate(camFront * moveSpeed);
 	}
 	if (key == GLFW_KEY_LEFT) {
 		trans = -(glm::normalize(glm::cross(camFront, glm::vec3(1, 0, 0))) * moveSpeed);
@@ -71,7 +73,11 @@ static void keyCallback(GLFWwindow *window, int key, int, int action, int) {
 	if (key == GLFW_KEY_RIGHT) {
 		trans = glm::normalize(glm::cross(camFront, glm::vec3(1, 0, 0))) * moveSpeed;
 	}
+	glm::vec3 prevPos = Camera::getInstance()->position;
 	Camera::getInstance()->translate(trans);
+	if (Collision::cameraCollide()) {
+		Camera::getInstance()->setPosition(prevPos);
+	}
 	//glm::rotate();
 }
 

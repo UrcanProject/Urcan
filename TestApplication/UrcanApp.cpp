@@ -7,9 +7,9 @@
 #include "UrcanApp.hh"
 #include "Camera.hh"
 
-const uint32_t urcan::UrcanApp::_mapWidth = 300;
-const uint32_t urcan::UrcanApp::_mapDepth = 300;
-const uint32_t urcan::UrcanApp::_mapHeight = 100;
+const uint32_t urcan::UrcanApp::_mapWidth = 100;
+const uint32_t urcan::UrcanApp::_mapDepth = 100;
+const uint32_t urcan::UrcanApp::_mapHeight = 30;
 const uint32_t urcan::UrcanApp::_nbPiles = 10;
 const float urcan::UrcanApp::_dispersion = 0.25;
 
@@ -43,4 +43,8 @@ void urcan::UrcanApp::run() {
 void urcan::UrcanApp::initApp() {
 	_context = urcan::UrcanInstance::getOrCreateInstance();
 	_window = urcan::UrcanInstance::getWindow();
+}
+
+const FallingSand &urcan::UrcanApp::getMapGenerator() const {
+    return (this->_mapGenerator);
 }
