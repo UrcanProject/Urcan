@@ -24,7 +24,7 @@ urcan::UrcanApp::~UrcanApp() {
 void urcan::UrcanApp::mainLoop() {
 	HeightToVertexConvertor conv;
 
-	conv.feed(this->_mapGenerator.getMap(), -10, -10, this->_mapGenerator.getLowestHeight(), this->_mapGenerator.getHighestHeight());
+	conv.feed(this->_mapGenerator.getMap(), 0, 0, this->_mapGenerator.getLowestHeight(), this->_mapGenerator.getHighestHeight());
     _context->updateMesh(conv.getVertices(), conv.getIndexes());
 	Camera::getInstance()->translate({0, 0, 0});
     while (!glfwWindowShouldClose(_window)) {

@@ -3,6 +3,7 @@
 //
 
 #include <synchapi.h>
+#include <unordered_map>
 #include "Collision.hpp"
 #include "BasicConfiguration.hpp"
 #include "GLFWCore.hh"
@@ -10,8 +11,25 @@
 #include "UrcanApp.hh"
 #include "UrcanInstance.hh"
 
+float rotateSpeed = 2.0f;
+
+std::unordered_map<int, bool> keyHold = {
+		{GLFW_KEY_W, false},
+		{GLFW_KEY_A, false},
+		{GLFW_KEY_S, false},
+		{GLFW_KEY_D, false}
+};
+
 static std::ostream &operator<<(std::ostream &s, glm::vec3 v) {
-	return s << "(" << v.x << ";" << v.y << ";" << v.z << ")";
+    glm::vec3 disp = v;
+    double lim = 0.0000001f;
+    if (disp.x > -lim && disp.x < lim)
+        disp.x = 0;
+    if (disp.y > -lim && disp.y < lim)
+        disp.y = 0;
+    if (disp.z > -lim && disp.z < lim)
+        disp.z = 0;
+	return s << "(" << disp.x << ";" << disp.y << ";" << disp.z << ")";
 }
 
 static void keyCallback(GLFWwindow *window, int key, int, int action, int) {
@@ -19,66 +37,88 @@ static void keyCallback(GLFWwindow *window, int key, int, int action, int) {
 		glfwSetWindowShouldClose(window, 1);
 	}
 
-	float speed = 2.0f;
-
-	if (key == GLFW_KEY_W)
-		Camera::getInstance()->rotate({speed, 0.0, 0.0});
-	if (key == GLFW_KEY_D)
-		Camera::getInstance()->rotate({0.0, speed, 0.0});
-	if (key == GLFW_KEY_S)
-		Camera::getInstance()->rotate({-speed, 0.0, 0.0});
-	if (key == GLFW_KEY_A)
-		Camera::getInstance()->rotate({0.0, -speed, 0.0});
+	if (keyHold.find(key) != keyHold.end())
+		keyHold[key] = (action == GLFW_PRESS ? true : (action == GLFW_RELEASE ? false : keyHold[key]));
 
 	if (key == GLFW_KEY_R && action == GLFW_PRESS)
-		Camera::getInstance()->setRotation({0, 0, Camera::getInstance()->rotation.z});
+		Camera::getInstance()->setRotation({0, Camera::getInstance()->rotation.y, 0});
 	if (key == GLFW_KEY_U && action == GLFW_PRESS)
 		Camera::getInstance()->rotate({45.0, 0.0, 0.0});
 	if (key == GLFW_KEY_I && action == GLFW_PRESS)
-		Camera::getInstance()->rotate({0.0, 45.0, 0.0});
+		Camera::getInstance()->rotate({0.0, 0.0, 45.0});
 	if (key == GLFW_KEY_J && action == GLFW_PRESS)
 		Camera::getInstance()->rotate({-45.0, 0.0, 0.0});
 	if (key == GLFW_KEY_K && action == GLFW_PRESS)
-		Camera::getInstance()->rotate({0.0, -45.0, 0.0});
+		Camera::getInstance()->rotate({0.0, 0.0, -45.0});
 
 
-	if (key == GLFW_KEY_P && action == GLFW_PRESS) {
-		std::cout << "Position is " << Camera::getInstance()->position << std::endl;
-		std::cout << "Rotation is " << Camera::getInstance()->rotation << std::endl;
+
+
+	//glm::rotate();
+}
+
+static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
+{
+    static double oldX = -1;
+    static double oldY = -1;
+	const double rotFac = 0.1;
+	double deltaY = fabs(ypos - oldY);
+	double deltaX = fabs(xpos - oldX);
+
+	std::cout << "Old " << oldX << " " << oldY << std::endl;
+	std::cout << "Received " << xpos << " " << ypos << std::endl;
+
+	if (oldX > 0.0 && oldY > 0.0) {
+		if (ypos < oldY)
+			Camera::getInstance()->rotate({rotateSpeed * rotFac * deltaY, 0.0, 0.0});
+		if (ypos > oldY)
+			Camera::getInstance()->rotate({-rotateSpeed * rotFac * deltaY, 0.0, 0.0});
+		if (xpos < oldX)
+			Camera::getInstance()->rotate({0.0, 0.0, rotateSpeed * rotFac * deltaX});
+		if (xpos > oldX)
+			Camera::getInstance()->rotate({0.0, 0.0, -rotateSpeed * rotFac * deltaX});
 	}
+	oldX = xpos;
+	oldY = ypos;
+}
+
+void urcan::GLFWCore::moveTurn()
+{
+	static auto startTime = std::chrono::high_resolution_clock::now();
+	auto currentTime = std::chrono::high_resolution_clock::now();
+	float time = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count() / 1000.0f;
 
 	glm::vec3 camFront;
-	camFront.x = (float) (cos(glm::radians(Camera::getInstance()->rotation.y)) *
-						  sin(glm::radians(Camera::getInstance()->rotation.x)));
-	camFront.y = (float) sin(glm::radians(Camera::getInstance()->rotation.y));
-	camFront.z = (float) (-(cos(glm::radians(Camera::getInstance()->rotation.y)) *
-						   cos(glm::radians(Camera::getInstance()->rotation.x))));
+	camFront.y = (float) (-sin(glm::radians(Camera::getInstance()->rotation.x)) *
+	                      cos(glm::radians(Camera::getInstance()->rotation.z)));
+	camFront.z = (float) -cos(glm::radians(Camera::getInstance()->rotation.x));
+	camFront.x = (float) (-(sin(glm::radians(Camera::getInstance()->rotation.x)) *
+	                        sin(glm::radians(Camera::getInstance()->rotation.z))));
+	glm::vec3 unCamFront = camFront;
 	camFront = glm::normalize(camFront);
 
-	//std::cout << "Cam = " << camFront << std::endl;
-
-	float moveSpeed = 2.0f;
+	float moveSpeed = 200.0f * time;
 
 	glm::vec3 trans({0.0f, 0.0f, 0.0f});
-	if (key == GLFW_KEY_UP) {
+	if (keyHold[GLFW_KEY_W]) {
 		trans = -(camFront * moveSpeed);
 	}
-	if (key == GLFW_KEY_DOWN) {
+	if (keyHold[GLFW_KEY_S]) {
 		trans = camFront * moveSpeed;
-		//Camera::getInstance()->translate(camFront * moveSpeed);
 	}
-	if (key == GLFW_KEY_LEFT) {
-		trans = -(glm::normalize(glm::cross(camFront, glm::vec3(1, 0, 0))) * moveSpeed);
+	if (keyHold[GLFW_KEY_A]) {
+		trans = -(glm::normalize(glm::cross(camFront, glm::vec3(0, 0, 1))) * moveSpeed);
 	}
-	if (key == GLFW_KEY_RIGHT) {
-		trans = glm::normalize(glm::cross(camFront, glm::vec3(1, 0, 0))) * moveSpeed;
+	if (keyHold[GLFW_KEY_D]) {
+		trans = glm::normalize(glm::cross(camFront, glm::vec3(0, 0, 1))) * moveSpeed;
 	}
 	glm::vec3 prevPos = Camera::getInstance()->position;
 	Camera::getInstance()->translate(trans);
+
 	if (Collision::cameraCollide()) {
 		Camera::getInstance()->setPosition(prevPos);
 	}
-	//glm::rotate();
+    startTime = currentTime;
 }
 
 urcan::GLFWCore::GLFWCore() {
@@ -90,9 +130,11 @@ urcan::GLFWCore::GLFWCore() {
 	_window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
 	glfwSetKeyCallback(_window, keyCallback);
 	glfwSetWindowSizeCallback(_window, GLFWCore::onWindowResized);
+    glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetCursorPosCallback(_window, cursor_position_callback);
 
-	Camera::getInstance()->rotate({0.0, 0.0, 0.0});
-	Camera::getInstance()->translate({-91, 0, 0});
+	Camera::getInstance()->rotate({90.0, 0.0, 180.0});
+	Camera::getInstance()->translate({0, 0, -80});
 }
 
 urcan::GLFWCore::~GLFWCore() {
