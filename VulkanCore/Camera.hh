@@ -28,6 +28,9 @@ public:
 	glm::vec3 rotation = glm::vec3();
 	glm::vec3 position = glm::vec3();
 
+	float gravity = 20.0;
+	float zVelocity = 0.0f;
+
 	float rotationSpeed = 1.0f;
 	float movementSpeed = 1.0f;
 
@@ -43,6 +46,7 @@ public:
 		bool right = false;
 		bool up = false;
 		bool down = false;
+		bool space = false;
 	} keys;
 
 	bool moving();

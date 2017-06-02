@@ -98,18 +98,30 @@ void urcan::GLFWCore::moveTurn()
 
 	glm::vec3 trans({0.0f, 0.0f, 0.0f});
 	if (keyHold[GLFW_KEY_W]) {
-		trans = -(camFront * moveSpeed);
-	}
+		trans += -(camFront * moveSpeed);
+        Camera::getInstance()->zVelocity = -20.0f;
+    }
 	if (keyHold[GLFW_KEY_S]) {
-		trans = camFront * moveSpeed;
-	}
+		trans += camFront * moveSpeed;
+        Camera::getInstance()->zVelocity = -20.0f;
+    }
 	if (keyHold[GLFW_KEY_A]) {
-		trans = -(glm::normalize(glm::cross(camFront, glm::vec3(0, 0, 1))) * moveSpeed);
-	}
+		trans += -(glm::normalize(glm::cross(camFront, glm::vec3(0, 0, 1))) * moveSpeed);
+        Camera::getInstance()->zVelocity = -20.0f;
+    }
 	if (keyHold[GLFW_KEY_D]) {
-		trans = glm::normalize(glm::cross(camFront, glm::vec3(0, 0, 1))) * moveSpeed;
-	}
-	glm::vec3 prevPos = Camera::getInstance()->position;
+		trans += glm::normalize(glm::cross(camFront, glm::vec3(0, 0, 1))) * moveSpeed;
+        Camera::getInstance()->zVelocity = -20.0f;
+    }
+    if (keyHold[GLFW_KEY_SPACE]) {
+        if (Camera::getInstance()->zVelocity == 0) {
+            Camera::getInstance()->zVelocity = 20.0f;
+        }
+    }
+    trans -= glm::vec3(0, 0, Camera::getInstance()->zVelocity * time);
+    if (Camera::getInstance()->zVelocity != 0.0)
+        Camera::getInstance()->zVelocity -= Camera::getInstance()->gravity * time;
+    glm::vec3 prevPos = Camera::getInstance()->position;
 	Camera::getInstance()->translate(trans);
 
 	if (Collision::cameraCollide()) {

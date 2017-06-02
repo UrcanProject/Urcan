@@ -27,10 +27,12 @@ bool Collision::cameraCollide() {
         glm::vec3 it = glm::vec3(0.0, 0.0, 0.0);
         for (uint32_t i = 0 ; i < maxCoord ; i++) {
             if (cubeCollide(map, pos.x + it.x, pos.y + it.y, pos.z + it.z)) {
+                Camera::getInstance()->zVelocity = 0.0f;
                 --pos.z;
                 Camera::getInstance()->setPosition(pos);
             }
             if (cubeCollide(map, pos.x + it.x, pos.y + it.y, (pos.z + it.z) + 1)) {
+                Camera::getInstance()->zVelocity = 0.0f;
                 --pos.z;
                 Camera::getInstance()->setPosition(pos);
             }

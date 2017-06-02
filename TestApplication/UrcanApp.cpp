@@ -7,11 +7,11 @@
 #include "UrcanApp.hh"
 #include "Camera.hh"
 
-const uint32_t urcan::UrcanApp::_mapWidth = 100;
-const uint32_t urcan::UrcanApp::_mapDepth = 100;
-const uint32_t urcan::UrcanApp::_mapHeight = 30;
+const uint32_t urcan::UrcanApp::_mapWidth = 1000;
+const uint32_t urcan::UrcanApp::_mapDepth = 1000;
+const uint32_t urcan::UrcanApp::_mapHeight = 100;
 const uint32_t urcan::UrcanApp::_nbPiles = 10;
-const float urcan::UrcanApp::_dispersion = 0.25;
+const float urcan::UrcanApp::_dispersion = 0.4;
 
 urcan::UrcanApp::UrcanApp() : _mapGenerator(_mapWidth, _mapDepth, 0, _mapHeight, _nbPiles, _dispersion) {
 
