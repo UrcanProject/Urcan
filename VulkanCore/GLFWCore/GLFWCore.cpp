@@ -94,28 +94,28 @@ void urcan::GLFWCore::moveTurn()
 	glm::vec3 unCamFront = camFront;
 	camFront = glm::normalize(camFront);
 
-	float moveSpeed = 200.0f * time;
+	float moveSpeed = 50.0f * time;
 
 	glm::vec3 trans({0.0f, 0.0f, 0.0f});
 	if (keyHold[GLFW_KEY_W]) {
 		trans += -(camFront * moveSpeed);
-        Camera::getInstance()->zVelocity = -20.0f;
+        Camera::getInstance()->zVelocity = -0.1f;
     }
 	if (keyHold[GLFW_KEY_S]) {
 		trans += camFront * moveSpeed;
-        Camera::getInstance()->zVelocity = -20.0f;
+        Camera::getInstance()->zVelocity = -0.1f;
     }
 	if (keyHold[GLFW_KEY_A]) {
 		trans += -(glm::normalize(glm::cross(camFront, glm::vec3(0, 0, 1))) * moveSpeed);
-        Camera::getInstance()->zVelocity = -20.0f;
+        Camera::getInstance()->zVelocity = -0.1f;
     }
 	if (keyHold[GLFW_KEY_D]) {
 		trans += glm::normalize(glm::cross(camFront, glm::vec3(0, 0, 1))) * moveSpeed;
-        Camera::getInstance()->zVelocity = -20.0f;
+        Camera::getInstance()->zVelocity = -0.1f;
     }
     if (keyHold[GLFW_KEY_SPACE]) {
         if (Camera::getInstance()->zVelocity == 0) {
-            Camera::getInstance()->zVelocity = 20.0f;
+            Camera::getInstance()->zVelocity = 60.0f;
         }
     }
     trans -= glm::vec3(0, 0, Camera::getInstance()->zVelocity * time);
@@ -136,7 +136,7 @@ urcan::GLFWCore::GLFWCore() {
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
-	_window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
+	_window = glfwCreateWindow(WIDTH, HEIGHT, "Urcan", nullptr, nullptr);
 	glfwSetKeyCallback(_window, keyCallback);
 	glfwSetWindowSizeCallback(_window, GLFWCore::onWindowResized);
     glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);

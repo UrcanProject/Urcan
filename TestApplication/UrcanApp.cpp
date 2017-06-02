@@ -9,9 +9,9 @@
 
 const uint32_t urcan::UrcanApp::_mapWidth = 1000;
 const uint32_t urcan::UrcanApp::_mapDepth = 1000;
-const uint32_t urcan::UrcanApp::_mapHeight = 100;
-const uint32_t urcan::UrcanApp::_nbPiles = 10;
-const float urcan::UrcanApp::_dispersion = 0.4;
+const uint32_t urcan::UrcanApp::_mapHeight = 300;
+const uint32_t urcan::UrcanApp::_nbPiles = 100;
+const float urcan::UrcanApp::_dispersion = 0.31;
 
 urcan::UrcanApp::UrcanApp() : _mapGenerator(_mapWidth, _mapDepth, 0, _mapHeight, _nbPiles, _dispersion) {
 
