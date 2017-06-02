@@ -2,7 +2,7 @@
 // Created by Guillaume on 02/05/2017.
 //
 
-#include <Color.hpp>
+#include "Color.hpp"
 #include "HeightToVertexConvertor.hh"
 
 static const std::vector<Vertex> verticesMod = {

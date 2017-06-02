@@ -6,8 +6,8 @@
 #include "HeightToVertexConvertor.hh"
 #include "UrcanApp.hh"
 
-const uint32_t urcan::UrcanApp::_mapWidth = 200;
-const uint32_t urcan::UrcanApp::_mapDepth = 200;
+const uint32_t urcan::UrcanApp::_mapWidth = 1000;
+const uint32_t urcan::UrcanApp::_mapDepth = 1000;
 const uint32_t urcan::UrcanApp::_mapHeight = 200;
 const uint32_t urcan::UrcanApp::_nbPiles = 50;
 const float urcan::UrcanApp::_dispersion = 0.25;
