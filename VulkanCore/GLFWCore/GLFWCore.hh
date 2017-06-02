@@ -23,6 +23,7 @@ namespace urcan
 		void setWindow(GLFWwindow *win);
 		GLFWwindow* replaceWindow(GLFWwindow *win);
 		static void onWindowResized(GLFWwindow* window, int width, int height);
+		void moveTurn();
 	};
 }
 
