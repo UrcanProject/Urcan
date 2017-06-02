@@ -736,9 +736,7 @@ void urcan::UrcanInstance::updateUniformBuffer() {
 
 	//ubo.view = glm::lookAt(glm::vec3(2.0001f, 2.0001f, 2.0001f), glm::vec3(2.0000f, 2.0000f, 2.0000f), glm::vec3(0.0f, 0.0f, 1.0f));
 	//Camera::getInstance()->setPerspective(glm::radians(60.0f), _swapChainExtent.width / static_cast<float>(_swapChainExtent.height), 0.1f, 256.0f);
-	std::cout << "Position is " << Camera::getInstance()->position << std::endl;
-	std::cout << "Rotation is " << Camera::getInstance()->rotation << std::endl;
-	ubo.model = glm::rotate(glm::mat4(), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	ubo.model = glm::rotate(glm::mat4(), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	ubo.view = Camera::getInstance()->matrices.view;
 	ubo.proj = glm::perspective(glm::radians(80.0f), (float)WIDTH / (float)HEIGHT, 0.001f, 2048.0f);
 	//ubo.proj[1][1] *= -1;

@@ -16,66 +16,62 @@ static void keyCallback(GLFWwindow *window, int key, int, int action, int) {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
 		glfwSetWindowShouldClose(window, 1);
 	}
+
+	float speed = 2.0f;
+
 	if (key == GLFW_KEY_W)
-		Camera::getInstance()->rotate({1.0, 0.0, 0.0});
+		Camera::getInstance()->rotate({speed, 0.0, 0.0});
 	if (key == GLFW_KEY_D)
-		Camera::getInstance()->rotate({0.0, 1.0, 0.0});
+		Camera::getInstance()->rotate({0.0, speed, 0.0});
 	if (key == GLFW_KEY_S)
-		Camera::getInstance()->rotate({-1.0, 0.0, 0.0});
+		Camera::getInstance()->rotate({-speed, 0.0, 0.0});
 	if (key == GLFW_KEY_A)
-		Camera::getInstance()->rotate({0.0, -1.0, 0.0});
+		Camera::getInstance()->rotate({0.0, -speed, 0.0});
 
 	if (key == GLFW_KEY_R && action == GLFW_PRESS)
-		Camera::getInstance()->setRotation({0, 0, 0});
+		Camera::getInstance()->setRotation({0, 0, Camera::getInstance()->rotation.z});
 	if (key == GLFW_KEY_U && action == GLFW_PRESS)
 		Camera::getInstance()->rotate({45.0, 0.0, 0.0});
 	if (key == GLFW_KEY_I && action == GLFW_PRESS)
 		Camera::getInstance()->rotate({0.0, 45.0, 0.0});
-	if (key == GLFW_KEY_O && action == GLFW_PRESS)
-		Camera::getInstance()->rotate({0.0, 0.0, 45.0});
 	if (key == GLFW_KEY_J && action == GLFW_PRESS)
 		Camera::getInstance()->rotate({-45.0, 0.0, 0.0});
 	if (key == GLFW_KEY_K && action == GLFW_PRESS)
 		Camera::getInstance()->rotate({0.0, -45.0, 0.0});
-	if (key == GLFW_KEY_L && action == GLFW_PRESS)
-		Camera::getInstance()->rotate({0.0, 0.0, -45.0});
+
+
+	if (key == GLFW_KEY_P && action == GLFW_PRESS) {
+		std::cout << "Position is " << Camera::getInstance()->position << std::endl;
+		std::cout << "Rotation is " << Camera::getInstance()->rotation << std::endl;
+	}
 
 	glm::vec3 camFront;
-	camFront.x = (float) (-cos(glm::radians(Camera::getInstance()->rotation.y)) *
-						  sin(glm::radians(Camera::getInstance()->rotation.z)));
+	camFront.x = (float) (cos(glm::radians(Camera::getInstance()->rotation.y)) *
+						  sin(glm::radians(Camera::getInstance()->rotation.x)));
 	camFront.y = (float) sin(glm::radians(Camera::getInstance()->rotation.y));
-	camFront.z = (float) -(cos(glm::radians(Camera::getInstance()->rotation.y)) *
-						   cos(glm::radians(Camera::getInstance()->rotation.z)));
+	camFront.z = (float) (-(cos(glm::radians(Camera::getInstance()->rotation.y)) *
+						   cos(glm::radians(Camera::getInstance()->rotation.x))));
 	camFront = glm::normalize(camFront);
 
-	std::cout << "Cam = " << camFront << std::endl;
+	//std::cout << "Cam = " << camFront << std::endl;
 
-	float moveSpeed = 1.0f;
-	glm::vec3 dirVec({0.0, 0.0, 0.0});
+	float moveSpeed = 2.0f;
 
+	glm::vec3 trans({0.0f, 0.0f, 0.0f});
 	if (key == GLFW_KEY_UP) {
-		dirVec = {moveSpeed, 0.0, 0.0};
-		std::cout << "Up Going to " << camFront * moveSpeed << std::endl;
-		Camera::getInstance()->translate(camFront * moveSpeed);
+		trans = -(camFront * moveSpeed);
 	}
 	if (key == GLFW_KEY_DOWN) {
-		dirVec = {-moveSpeed, 0.0, 0.0};
-		std::cout << "Down Going to " << camFront * -moveSpeed << std::endl;
-		Camera::getInstance()->translate(-(camFront * moveSpeed));
+		trans = camFront * moveSpeed;
+		Camera::getInstance()->translate(camFront * moveSpeed);
 	}
 	if (key == GLFW_KEY_LEFT) {
-		dirVec = {0.0, -moveSpeed, 0.0};
-		std::cout << "Left Going to " << glm::normalize(glm::cross(camFront, glm::vec3(0.0f, 1.0f, 0.0f))) * -moveSpeed
-				  << std::endl;
-		Camera::getInstance()->translate(
-				-(glm::normalize(glm::cross(camFront, glm::vec3(0.0f, 1.0f, 0.0f))) * moveSpeed));
+		trans = -(glm::normalize(glm::cross(camFront, glm::vec3(1, 0, 0))) * moveSpeed);
 	}
 	if (key == GLFW_KEY_RIGHT) {
-		dirVec = {0.0, moveSpeed, 0.0};
-		std::cout << "Right Going to " << glm::normalize(glm::cross(camFront, glm::vec3(0.0f, 1.0f, 0.0f))) * moveSpeed
-				  << std::endl;
-		Camera::getInstance()->translate(glm::normalize(glm::cross(camFront, glm::vec3(0.0f, 1.0f, 0.0f))) * moveSpeed);
+		trans = glm::normalize(glm::cross(camFront, glm::vec3(1, 0, 0))) * moveSpeed;
 	}
+	Camera::getInstance()->translate(trans);
 	//glm::rotate();
 }
 
@@ -89,7 +85,7 @@ urcan::GLFWCore::GLFWCore() {
 	glfwSetKeyCallback(_window, keyCallback);
 	glfwSetWindowSizeCallback(_window, GLFWCore::onWindowResized);
 
-	Camera::getInstance()->rotate({0.0, 45.0, 270.0});
+	Camera::getInstance()->rotate({0.0, 0.0, 0.0});
 	Camera::getInstance()->translate({-91, 0, 0});
 }
 

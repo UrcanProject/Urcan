@@ -5,6 +5,7 @@
 #include <GLFW/glfw3.h>
 #include "HeightToVertexConvertor.hh"
 #include "UrcanApp.hh"
+#include "Camera.hh"
 
 const uint32_t urcan::UrcanApp::_mapWidth = 300;
 const uint32_t urcan::UrcanApp::_mapDepth = 300;
@@ -25,6 +26,7 @@ void urcan::UrcanApp::mainLoop() {
 
 	conv.feed(this->_mapGenerator.getMap(), -10, -10, this->_mapGenerator.getLowestHeight(), this->_mapGenerator.getHighestHeight());
     _context->updateMesh(conv.getVertices(), conv.getIndexes());
+	Camera::getInstance()->translate({0, 0, 0});
     while (!glfwWindowShouldClose(_window)) {
 		glfwPollEvents();
 		_context->updateUniformBuffer();
