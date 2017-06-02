@@ -18,8 +18,7 @@ std::mutex urcan::UrcanInstance::_instanceMutex;
 bool urcan::UrcanInstance::_fullyInitialized = false;
 urcan::GLFWCore urcan::UrcanInstance::_glfwCore;
 
-urcan::UrcanInstance::UrcanInstance() : _callback(_instance) {
-}
+urcan::UrcanInstance::UrcanInstance() : _vertices(defVertices), _indices(defIndices), _callback(_instance) {}
 
 urcan::UrcanInstance::~UrcanInstance() {
 	this->_fullyInitialized = false;
@@ -154,7 +153,7 @@ void urcan::UrcanInstance::pickPhysicalDevice() {
 		}
 	}
 
-	if (_physicalDevice == VK_NULL_HANDLE) {
+	if (_physicalDevice == nullptr) {
 		throw std::runtime_error("failed to find a suitable GPU!");
 	}
 }
@@ -347,7 +346,7 @@ void urcan::UrcanInstance::createSwapChain() {
 											 vk::SharingMode::eExclusive, 0, nullptr,
 											 swapChainSupport.capabilities.currentTransform,
 											 vk::CompositeAlphaFlagBitsKHR::eOpaque, presentMode, VK_TRUE,
-											 VK_NULL_HANDLE};
+											 nullptr};
 
 	QueueFamilyIndices indices = findQueueFamilies(_physicalDevice);
 	uint32_t queueFamilyIndices[] = {static_cast<uint32_t>(indices.graphicsFamily),
@@ -449,9 +448,9 @@ void urcan::UrcanInstance::createGraphicsPipeline() {
 															vk::CompareOp::eLess, VK_FALSE, VK_FALSE, {}, {}, 0.0f, 1.0f};
 
 	vk::GraphicsPipelineCreateInfo pipelineInfo = {vk::PipelineCreateFlags(), 2, shaderStages, &vertexInputInfo, &inputAssembly, nullptr, &viewportState, &rasterizer,
-												   &multisampling, &depthStencil, &colorBlending, nullptr, _pipelineLayout, _renderPass, 0, VK_NULL_HANDLE, -1};
+												   &multisampling, &depthStencil, &colorBlending, nullptr, _pipelineLayout, _renderPass, 0, nullptr, -1};
 
-	if (_device.get().createGraphicsPipelines(VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, _graphicsPipeline.replace()) != vk::Result::eSuccess) {
+	if (_device.get().createGraphicsPipelines(nullptr, 1, &pipelineInfo, nullptr, _graphicsPipeline.replace()) != vk::Result::eSuccess) {
 		throw std::runtime_error("failed to create graphics pipeline!");
 	}
 }
@@ -547,9 +546,9 @@ void urcan::UrcanInstance::createCommandBuffers() {
 		vk::Buffer vertexBuffers[] = {_vertexBuffer};
 		vk::DeviceSize offsets[] = {0};
 		_commandBuffers[i].bindVertexBuffers(0, 1, vertexBuffers, offsets);
-		_commandBuffers[i].bindIndexBuffer(_indexBuffer, 0, vk::IndexType::eUint16);
+		_commandBuffers[i].bindIndexBuffer(_indexBuffer, 0, vk::IndexType::eUint32);
 		_commandBuffers[i].bindDescriptorSets(vk::PipelineBindPoint::eGraphics, _pipelineLayout, 0, 1, &_descriptorSet, 0, nullptr);
-		_commandBuffers[i].drawIndexed(indices.size(), 1, 0, 0, 0);
+		_commandBuffers[i].drawIndexed(_indices.size(), 1, 0, 0, 0);
 		_commandBuffers[i].endRenderPass();
 		_commandBuffers[i].end();
 	}
@@ -565,7 +564,7 @@ void urcan::UrcanInstance::createSemaphores() {
 
 void urcan::UrcanInstance::drawFrame() {
 	uint32_t imageIndex;
-	vk::Result result = _device.get().acquireNextImageKHR(_swapChain, std::numeric_limits<uint64_t>::max(), _imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+	vk::Result result = _device.get().acquireNextImageKHR(_swapChain, std::numeric_limits<uint64_t>::max(), _imageAvailableSemaphore, nullptr, &imageIndex);
 
 	if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) {
 		recreateSwapChain();
@@ -579,7 +578,7 @@ void urcan::UrcanInstance::drawFrame() {
 	vk::Semaphore signalSemaphores[] = {_renderFinishedSemaphore};
 
 	vk::SubmitInfo submitInfo = {1, waitSemaphores, waitStages, 1, &_commandBuffers[imageIndex], 1, signalSemaphores};
-	if (_graphicsQueue.submit(1, &submitInfo, VK_NULL_HANDLE) != vk::Result::eSuccess) {
+	if (_graphicsQueue.submit(1, &submitInfo, nullptr) != vk::Result::eSuccess) {
 		throw std::runtime_error("failed to submit draw command buffer!");
 	}
 
@@ -609,14 +608,14 @@ void urcan::UrcanInstance::notifyWindowChange() {
 }
 
 void urcan::UrcanInstance::createVertexBuffer() {
-	vk::DeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+	vk::DeviceSize bufferSize = sizeof(_vertices[0]) * _vertices.size();
 	VDeleterExtended<vk::Buffer, vk::BufferDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> stagingBuffer {_device};
 	VDeleterExtended<vk::DeviceMemory, vk::DeviceMemoryDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> stagingBufferMemory {_device};
 	createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferSrc,  vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, stagingBuffer, stagingBufferMemory);
 
 	void* data;
 	_device.get().mapMemory(stagingBufferMemory, 0, bufferSize, static_cast<vk::MemoryMapFlagBits>(0), &data);
-	memcpy(data, vertices.data(), static_cast<size_t>(bufferSize));
+	memcpy(data, _vertices.data(), static_cast<size_t>(bufferSize));
 	_device.get().unmapMemory(stagingBufferMemory);
 
 	createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal, _vertexBuffer, _vertexBufferMemory);
@@ -624,14 +623,14 @@ void urcan::UrcanInstance::createVertexBuffer() {
 }
 
 void urcan::UrcanInstance::createIndexBuffer() {
-	vk::DeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+	vk::DeviceSize bufferSize = sizeof(_indices[0]) * _indices.size();
 	VDeleterExtended<vk::Buffer, vk::BufferDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> stagingBuffer {_device};
 	VDeleterExtended<vk::DeviceMemory, vk::DeviceMemoryDeleter, VDeleter<vk::Device, vk::DeviceDeleter>> stagingBufferMemory {_device};
 	createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferSrc,  vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, stagingBuffer, stagingBufferMemory);
 
 	void* data;
 	_device.get().mapMemory(stagingBufferMemory, 0, bufferSize, static_cast<vk::MemoryMapFlagBits>(0), &data);
-	memcpy(data, indices.data(), static_cast<size_t>(bufferSize));
+	memcpy(data, _indices.data(), static_cast<size_t>(bufferSize));
 	_device.get().unmapMemory(stagingBufferMemory);
 
 	createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal, _indexBuffer, _indexBufferMemory);
@@ -686,7 +685,7 @@ void urcan::UrcanInstance::copyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer
 	vk::SubmitInfo submitInfo = {};
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &commandBuffer;
-	_graphicsQueue.submit(1, &submitInfo, VK_NULL_HANDLE);
+	_graphicsQueue.submit(1, &submitInfo, nullptr);
 	_graphicsQueue.waitIdle();
 	_device.get().freeCommandBuffers(_commandPool, 1, &commandBuffer);
 }
@@ -710,9 +709,10 @@ void urcan::UrcanInstance::createUniformBuffer() {
 void urcan::UrcanInstance::updateUniformBuffer() {
 	static auto startTime = std::chrono::high_resolution_clock::now();
 	auto currentTime = std::chrono::high_resolution_clock::now();
-	float time = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count() / 1000.0f;
+	float time = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count() / 10000.0f;
 	UniformBufferObject ubo;
-	ubo.model = glm::rotate(glm::mat4(), time * glm::radians(90.0f), glm::vec3(0.2f, 0.5f, 1.0f));
+	ubo.model = glm::rotate(glm::mat4(), time * glm::radians(135.0f), glm::vec3(0.0f, 0.0f, 1.0f)) *
+			glm::rotate(glm::mat4(), static_cast<float>(sin(2 * time * glm::radians(135.0f))), glm::vec3(0.0f, 1.0f, 0.0f));
 	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	ubo.proj = glm::perspective(glm::radians(45.0f), _swapChainExtent.width / static_cast<float>(_swapChainExtent.height), 0.1f, 10.0f);
 	ubo.proj[1][1] *= -1;
@@ -905,8 +905,30 @@ void urcan::UrcanInstance::endSingleTimeCommands(vk::CommandBuffer commandBuffer
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &commandBuffer;
 
-	_graphicsQueue.submit(1, &submitInfo, VK_NULL_HANDLE);
+	_graphicsQueue.submit(1, &submitInfo, nullptr);
 	_graphicsQueue.waitIdle();
 
 	_device.get().freeCommandBuffers(_commandPool, 1, &commandBuffer);
 }
+
+void urcan::UrcanInstance::setVertices(std::vector<Vertex> const &src) {
+	this->_vertices = src;
+}
+
+void urcan::UrcanInstance::setIndices(std::vector<uint32_t> const &src) {
+	this->_indices = src;
+}
+
+void urcan::UrcanInstance::updateMesh() {
+	this->waitIdle();
+	this->createVertexBuffer();
+	this->createIndexBuffer();
+	this->recreateSwapChain();
+}
+
+void urcan::UrcanInstance::updateMesh(std::vector<Vertex> const &srcVertex, std::vector<uint32_t> const &srcIdx) {
+	setVertices(srcVertex);
+	setIndices(srcIdx);
+	updateMesh();
+}
+

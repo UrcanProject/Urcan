@@ -6,6 +6,7 @@
 #define VULKAN_URCANAPP_HH
 
 #include <GLFW/glfw3.h>
+#include "FallingSand.hh"
 #include "UrcanInstance.hh"
 
 namespace urcan
@@ -14,6 +15,12 @@ namespace urcan
 	private:
 		UrcanInstance* _context;
 		GLFWwindow* _window;
+		static const uint32_t _mapWidth;
+		static const uint32_t _mapDepth;
+		static const uint32_t _mapHeight;
+		static const uint32_t _nbPiles;
+		static const float _dispersion;
+		FallingSand _mapGenerator;
 
 	private:
 		void mainLoop();
@@ -25,6 +32,7 @@ namespace urcan
 
 	public:
 		void run();
+
 	};
 }
 
