@@ -16,8 +16,11 @@ set(SOURCE_FILES main.cpp VulkanCore/BasicConfiguration.hpp VulkanCore/UrcanInst
         VulkanCore/GLFWCore/GLFWCore.hh ClassUtils/Utils.cpp ClassUtils/Utils.h Patterns/Singleton.hpp
         VulkanCore/Buffers/Vertex.cpp VulkanCore/Buffers/Vertex.hh VulkanCore/Buffers/UniformBufferObject.cpp
         VulkanCore/Buffers/UniformBufferObject.hh VulkanCore/HeightToVertexConvertor.cpp VulkanCore/HeightToVertexConvertor.hh
-        Terrain/FallingSand.hh Terrain/FallingSand.cpp ClassUtils/Color.cpp ClassUtils/Color.hpp VulkanCore/Camera.cpp VulkanCore/Camera.hh)
-        VulkanCore/Buffers/Vertex.cpp VulkanCore/Buffers/Vertex.hh VulkanCore/Buffers/UniformBufferObject.cpp VulkanCore/Buffers/UniformBufferObject.hh VulkanCore/HeightToVertexConvertor.cpp VulkanCore/HeightToVertexConvertor.hh Terrain/FallingSand.hh Terrain/FallingSand.cpp ClassUtils/Color.cpp ClassUtils/Color.hpp ClassUtils/FastRand.cpp ClassUtils/FastRand.hpp)
+        Terrain/FallingSand.hh Terrain/FallingSand.cpp ClassUtils/Color.cpp ClassUtils/Color.hpp VulkanCore/Camera.cpp VulkanCore/Camera.hh
+        VulkanCore/Buffers/Vertex.cpp VulkanCore/Buffers/Vertex.hh VulkanCore/Buffers/UniformBufferObject.cpp
+        VulkanCore/Buffers/UniformBufferObject.hh VulkanCore/HeightToVertexConvertor.cpp
+        VulkanCore/HeightToVertexConvertor.hh Terrain/FallingSand.hh Terrain/FallingSand.cpp
+        ClassUtils/Color.cpp ClassUtils/Color.hpp ClassUtils/FastRand.cpp ClassUtils/FastRand.hpp)
 add_executable(Vulkan ${SOURCE_FILES})
 
 target_link_libraries(Vulkan glfw3 gdi32 opengl32 vulkan-1 pthread)
