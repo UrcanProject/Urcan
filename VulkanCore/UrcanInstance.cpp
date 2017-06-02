@@ -13,6 +13,7 @@
 #include "UrcanInstance.hh"
 #include "Utils.h"
 #include "Buffers/UniformBufferObject.hh"
+#include "Camera.hh"
 
 std::mutex urcan::UrcanInstance::_instanceMutex;
 bool urcan::UrcanInstance::_fullyInitialized = false;
@@ -140,6 +141,7 @@ void urcan::UrcanInstance::setupDebugCallback() {
 
 void urcan::UrcanInstance::pickPhysicalDevice() {
 	uint32_t deviceCount = 0;
+	bool deviceFound = false;
 	_instance.get().enumeratePhysicalDevices(&deviceCount, nullptr);
 	if (deviceCount == 0) {
 		throw std::runtime_error("failed to find GPUs with Vulkan support!");
@@ -149,11 +151,12 @@ void urcan::UrcanInstance::pickPhysicalDevice() {
 	for (const auto &device : devices) {
 		if (isDeviceSuitable(device)) {
 			_physicalDevice = device;
+			deviceFound = true;
 			break;
 		}
 	}
 
-	if (_physicalDevice == nullptr) {
+	if (!deviceFound) {
 		throw std::runtime_error("failed to find a suitable GPU!");
 	}
 }
@@ -706,16 +709,39 @@ void urcan::UrcanInstance::createUniformBuffer() {
 	createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eUniformBuffer, vk::MemoryPropertyFlagBits::eDeviceLocal, _uniformBuffer, _uniformBufferMemory);
 }
 
+#include <Camera.hh>
+
+static std::ostream& operator<<(std::ostream &s, glm::vec3 v)
+{
+	return s << "(" << v.x << ";" << v.y << ";" << v.z << ")";
+}
+
 void urcan::UrcanInstance::updateUniformBuffer() {
-	static auto startTime = std::chrono::high_resolution_clock::now();
-	auto currentTime = std::chrono::high_resolution_clock::now();
-	float time = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count() / 10000.0f;
+	//static auto startTime = std::chrono::high_resolution_clock::now();
+	//auto currentTime = std::chrono::high_resolution_clock::now();
+	//float time = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count() / 10000.0f;
 	UniformBufferObject ubo;
-	ubo.model = glm::rotate(glm::mat4(), time * glm::radians(135.0f), glm::vec3(0.0f, 0.0f, 1.0f)) *
-			glm::rotate(glm::mat4(), static_cast<float>(sin(2 * time * glm::radians(135.0f))), glm::vec3(0.0f, 1.0f, 0.0f));
-	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	ubo.proj = glm::perspective(glm::radians(45.0f), _swapChainExtent.width / static_cast<float>(_swapChainExtent.height), 0.1f, 10.0f);
-	ubo.proj[1][1] *= -1;
+
+	//std::cout << "State of rot : " << Camera::getInstance()->rotation.x << " " << Camera::getInstance()->rotation.y << " " << Camera::getInstance()->rotation.z << std::endl;
+
+	/*ubo.model = glm::rotate(ubo.model, glm::radians(Camera::getInstance()->rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+	ubo.model = glm::rotate(ubo.model, glm::radians(Camera::getInstance()->rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+	ubo.model = glm::rotate(ubo.model, glm::radians(Camera::getInstance()->rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+	//ubo.model = glm::rotate(glm::mat4(), time * glm::radians(135.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	auto transM = glm::translate(glm::mat4(), Camera::getInstance()->position);
+
+	//td::cout << Camera::getInstance()->position << std::endl;
+
+	ubo.model *= transM;*/
+
+	//ubo.view = glm::lookAt(glm::vec3(2.0001f, 2.0001f, 2.0001f), glm::vec3(2.0000f, 2.0000f, 2.0000f), glm::vec3(0.0f, 0.0f, 1.0f));
+	//Camera::getInstance()->setPerspective(glm::radians(60.0f), _swapChainExtent.width / static_cast<float>(_swapChainExtent.height), 0.1f, 256.0f);
+	std::cout << "Position is " << Camera::getInstance()->position << std::endl;
+	std::cout << "Rotation is " << Camera::getInstance()->rotation << std::endl;
+	ubo.model = glm::rotate(glm::mat4(), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.view = Camera::getInstance()->matrices.view;
+	ubo.proj = glm::perspective(glm::radians(45.0f), (float)WIDTH / (float)HEIGHT, 0.01f, 256.0f);
+	//ubo.proj[1][1] *= -1;
 
 	void* data;
 	_device.get().mapMemory(_uniformStagingBufferMemory, 0, sizeof(ubo), static_cast<vk::MemoryMapFlagBits>(0), &data);

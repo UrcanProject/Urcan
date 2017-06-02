@@ -3,12 +3,54 @@
 //
 
 #include <UrcanInstance.hh>
+#include <Camera.hh>
+#include <synchapi.h>
 #include "BasicConfiguration.hpp"
 #include "GLFWCore.hh"
 
+static std::ostream& operator<<(std::ostream &s, glm::vec3 v)
+{
+	return s << "(" << v.x << ";" << v.y << ";" << v.z << ")";
+}
+
 static void keyCallback(GLFWwindow* window, int key, int, int action, int) {
-	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
 		glfwSetWindowShouldClose(window, 1);
+	}
+	if (key == GLFW_KEY_Q) {
+		Camera::getInstance()->rotate({1.0, 0.0, 0.0});
+	}
+	if (key == GLFW_KEY_S)
+		Camera::getInstance()->rotate({0.0, 1.0, 0.0});
+	if (key == GLFW_KEY_D)
+		Camera::getInstance()->rotate({0.0, 0.0, 1.0});
+
+	glm::vec3 camFront;
+	camFront.x = (-cos(glm::radians(Camera::getInstance()->rotation.x)) * sin(glm::radians(Camera::getInstance()->rotation.y)));
+	camFront.z = sin(glm::radians(Camera::getInstance()->rotation.x));
+	camFront.y = -(cos(glm::radians(Camera::getInstance()->rotation.x)) * cos(glm::radians(Camera::getInstance()->rotation.y)));
+	camFront = glm::normalize(camFront);
+
+	std::cout << "Cam = " << camFront << std::endl;
+
+	float moveSpeed = 0.03f;
+
+	if (key == GLFW_KEY_LEFT) {
+		std::cout << "Up Going to " << camFront * moveSpeed << std::endl;
+		Camera::getInstance()->translate(camFront * moveSpeed);
+	}
+	if (key == GLFW_KEY_RIGHT) {
+		std::cout << "Down Going to " << camFront * -moveSpeed << std::endl;
+		Camera::getInstance()->translate(-(camFront * moveSpeed));
+	}
+	if (key == GLFW_KEY_UP) {
+		std::cout << "Left Going to " << glm::normalize(glm::cross(camFront, glm::vec3(0.0f, 1.0f, 0.0f))) * -moveSpeed << std::endl;
+		Camera::getInstance()->translate(-(glm::normalize(glm::cross(camFront, glm::vec3(0.0f, 1.0f, 0.0f))) * moveSpeed));
+	}
+	if (key == GLFW_KEY_DOWN) {
+		std::cout << "Right Going to " << glm::normalize(glm::cross(camFront, glm::vec3(0.0f, 1.0f, 0.0f))) * moveSpeed << std::endl;
+		Camera::getInstance()->translate(glm::normalize(glm::cross(camFront, glm::vec3(0.0f, 1.0f, 0.0f))) * moveSpeed);
+	}
 }
 
 urcan::GLFWCore::GLFWCore() {
