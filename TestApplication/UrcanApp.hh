@@ -32,6 +32,7 @@ namespace urcan
 	public:
 		void run();
 		const FallingSand &getMapGenerator() const;
+        void regenMap();
 	};
 }
 

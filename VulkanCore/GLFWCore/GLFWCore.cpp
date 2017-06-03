@@ -118,6 +118,9 @@ void urcan::GLFWCore::moveTurn()
             Camera::getInstance()->zVelocity = 60.0f;
         }
     }
+    if (keyHold[GLFW_KEY_R]) {
+        urcan::UrcanApp::getInstance()->regenMap();
+    }
     trans -= glm::vec3(0, 0, Camera::getInstance()->zVelocity * time);
     if (Camera::getInstance()->zVelocity != 0.0)
         Camera::getInstance()->zVelocity -= Camera::getInstance()->gravity * time;

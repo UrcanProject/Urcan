@@ -48,3 +48,11 @@ void urcan::UrcanApp::initApp() {
 const FallingSand &urcan::UrcanApp::getMapGenerator() const {
     return (this->_mapGenerator);
 }
+
+void urcan::UrcanApp::regenMap() {
+    HeightToVertexConvertor conv;
+
+    this->_mapGenerator = FallingSand(_mapWidth, _mapDepth, 0, _mapHeight, _nbPiles, _dispersion);
+    conv.feed(this->_mapGenerator.getMap(), 0, 0, this->_mapGenerator.getLowestHeight(), this->_mapGenerator.getHighestHeight());
+    _context->updateMesh(conv.getVertices(), conv.getIndexes());
+}
