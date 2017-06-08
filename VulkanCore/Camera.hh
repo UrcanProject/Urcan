@@ -28,7 +28,7 @@ public:
 	glm::vec3 rotation = glm::vec3();
 	glm::vec3 position = glm::vec3();
 
-	float gravity = 40.0;
+	float gravity = 0.0000000f;
 	float zVelocity = 0.0f;
 
 	float rotationSpeed = 1.0f;

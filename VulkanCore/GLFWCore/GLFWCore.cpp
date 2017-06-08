@@ -40,6 +40,12 @@ static void keyCallback(GLFWwindow *window, int key, int, int action, int) {
 	if (keyHold.find(key) != keyHold.end())
 		keyHold[key] = (action == GLFW_PRESS ? true : (action == GLFW_RELEASE ? false : keyHold[key]));
 
+
+	if (key == GLFW_KEY_E)
+		Camera::getInstance()->rotate({0.0, 0.0, -1.0});
+	if (key == GLFW_KEY_Q)
+		Camera::getInstance()->rotate({0.0, 0.0, 1.0});
+
 	if (key == GLFW_KEY_R && action == GLFW_PRESS)
 		Camera::getInstance()->setRotation({0, Camera::getInstance()->rotation.y, 0});
 	if (key == GLFW_KEY_U && action == GLFW_PRESS)
