@@ -7,6 +7,7 @@
 
 #include <GLFW/glfw3.h>
 #include "IMapGenerator.hh"
+#include "HeightToVertexConvertor.hh"
 #include "UrcanInstance.hh"
 
 namespace urcan
@@ -21,9 +22,15 @@ namespace urcan
 		static const uint32_t _nbPiles;
 		static const float _dispersion;
 		IMapGenerator *_mapGenerator;
+		bool meshUpdated;
+		HeightToVertexConvertor conv;
+		bool meshUpdated;
+		std::thread _rendering_thread;
 
+		void renderingFunction();
 		void mainLoop();
 		void initApp();
+		void renderingThread();
 
 	public:
 		UrcanApp();
