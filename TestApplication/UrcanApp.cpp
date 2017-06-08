@@ -5,13 +5,13 @@
 #include <GLFW/glfw3.h>
 #include "PerlinNoise.hh"
 #include "HeightToVertexConvertor.hh"
-#include <Chrono.hh>
+#include "Chrono.hh"
 #include "UrcanApp.hh"
 #include "Camera.hh"
 
-const uint32_t urcan::UrcanApp::_mapWidth = 1000;
-const uint32_t urcan::UrcanApp::_mapDepth = 1000;
-const uint32_t urcan::UrcanApp::_mapHeight = 300;
+const uint32_t urcan::UrcanApp::_mapWidth = 100;
+const uint32_t urcan::UrcanApp::_mapDepth = 100;
+const uint32_t urcan::UrcanApp::_mapHeight = 100;
 const uint32_t urcan::UrcanApp::_nbPiles = 100;
 const float urcan::UrcanApp::_dispersion = 0.3;
 
@@ -27,9 +27,9 @@ urcan::UrcanApp::~UrcanApp() {
 
 void urcan::UrcanApp::mainLoop() {
 	static const double fps_max = 600.0;
-	conv.feed(this->_mapGenerator.getMap(), 0, 0, this->_mapGenerator.getLowestHeight(), this->_mapGenerator.getHighestHeight());
+	conv.feed(this->_mapGenerator->getMap(), 0, 0, this->_mapGenerator->getLowestHeight(), this->_mapGenerator->getHighestHeight());
 	_context->updateMesh(conv.getVertices(), conv.getIndexes());
-	Camera::getInstance()->translate({-static_cast<int32_t>(_mapWidth / 2), -static_cast<int32_t>(_mapDepth / 2), -static_cast<int32_t>(this->_mapGenerator.getHighestHeight())});
+	Camera::getInstance()->translate({-static_cast<int32_t>(_mapWidth / 2), -static_cast<int32_t>(_mapDepth / 2), -static_cast<int32_t>(this->_mapGenerator->getHighestHeight())});
 	Chrono chrono;
     while (!glfwWindowShouldClose(_window)) {
 	    chrono.start();
@@ -61,7 +61,7 @@ const IMapGenerator &urcan::UrcanApp::getMapGenerator() const {
 
 void urcan::UrcanApp::regenMap() {
 	this->_mapGenerator = new PerlinNoise(_mapWidth, _mapDepth, this->_mapHeight);
-	conv.feed(this->_mapGenerator.getMap(), 0, 0, this->_mapGenerator.getLowestHeight(), this->_mapGenerator.getHighestHeight());
+	conv.feed(this->_mapGenerator->getMap(), 0, 0, this->_mapGenerator->getLowestHeight(), this->_mapGenerator->getHighestHeight());
 	meshUpdated = true;
 }
 
