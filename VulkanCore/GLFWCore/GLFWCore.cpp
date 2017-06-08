@@ -45,6 +45,12 @@ static void keyCallback(GLFWwindow *window, int key, int, int action, int) {
 		Camera::getInstance()->rotate({0.0, 0.0, -1.0});
 	if (key == GLFW_KEY_Q)
 		Camera::getInstance()->rotate({0.0, 0.0, 1.0});
+	if (key == GLFW_KEY_F && action == GLFW_PRESS) {
+		Camera::getInstance()->flyMod = !Camera::getInstance()->flyMod;
+		if (!Camera::getInstance()->flyMod) {
+			Camera::getInstance()->zVelocity -= Camera::getInstance()->gravity;
+		}
+	}
 
 	if (key == GLFW_KEY_R && action == GLFW_PRESS)
 		Camera::getInstance()->setRotation({0, Camera::getInstance()->rotation.y, 0});
@@ -103,21 +109,22 @@ void urcan::GLFWCore::moveTurn()
 	float moveSpeed = 50.0f * time;
 
 	glm::vec3 trans({0.0f, 0.0f, 0.0f});
+	bool moved = false;
 	if (keyHold[GLFW_KEY_W]) {
 		trans += -(camFront * moveSpeed);
-        Camera::getInstance()->zVelocity = -0.1f;
+		moved = true;
     }
 	if (keyHold[GLFW_KEY_S]) {
 		trans += camFront * moveSpeed;
-        Camera::getInstance()->zVelocity = -0.1f;
+		moved = true;
     }
 	if (keyHold[GLFW_KEY_A]) {
 		trans += -(glm::normalize(glm::cross(camFront, glm::vec3(0, 0, 1))) * moveSpeed);
-        Camera::getInstance()->zVelocity = -0.1f;
+		moved = true;
     }
 	if (keyHold[GLFW_KEY_D]) {
 		trans += glm::normalize(glm::cross(camFront, glm::vec3(0, 0, 1))) * moveSpeed;
-        Camera::getInstance()->zVelocity = -0.1f;
+		moved = true;
     }
     if (keyHold[GLFW_KEY_SPACE]) {
         if (Camera::getInstance()->zVelocity == 0) {
@@ -127,15 +134,20 @@ void urcan::GLFWCore::moveTurn()
     if (keyHold[GLFW_KEY_R]) {
         urcan::UrcanApp::getInstance()->regenMap();
     }
-    trans -= glm::vec3(0, 0, Camera::getInstance()->zVelocity * time);
-    if (Camera::getInstance()->zVelocity != 0.0)
-        Camera::getInstance()->zVelocity -= Camera::getInstance()->gravity * time;
-    glm::vec3 prevPos = Camera::getInstance()->position;
-	Camera::getInstance()->translate(trans);
 
-	if (Collision::cameraCollide()) {
-		Camera::getInstance()->setPosition(prevPos);
+	if (!Camera::getInstance()->flyMod) {
+		trans = glm::vec3(trans.x, trans.y, -Camera::getInstance()->zVelocity * time);
+		if (Camera::getInstance()->zVelocity != 0.0 || moved)
+			Camera::getInstance()->zVelocity -= Camera::getInstance()->gravity * time;
+		glm::vec3 prevPos = Camera::getInstance()->position;
+		Camera::getInstance()->translate(trans);
+		if (Collision::cameraCollide()) {
+			Camera::getInstance()->setPosition(prevPos);
+		}
+	} else {
+		Camera::getInstance()->translate(trans);
 	}
+
     startTime = currentTime;
 }
 

@@ -15,6 +15,8 @@ bool Collision::cameraCollide() {
     static glm::vec3 last = Camera::getInstance()->position;
     const std::vector<std::vector<unsigned int>> &map = urcan::UrcanApp::getInstance()->getMapGenerator().getMap();
     glm::vec3 pos = Camera::getInstance()->position;
+	pos.x -= 0;
+	pos.y -= 0;
 
     if (pos != last) {
         glm::vec3 diff = pos - last;
