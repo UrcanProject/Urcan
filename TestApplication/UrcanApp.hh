@@ -6,6 +6,7 @@
 #define VULKAN_URCANAPP_HH
 
 #include <GLFW/glfw3.h>
+#include "HeightToVertexConvertor.hh"
 #include "FallingSand.hh"
 #include "UrcanInstance.hh"
 
@@ -21,9 +22,17 @@ namespace urcan
 		static const uint32_t _nbPiles;
 		static const float _dispersion;
 		FallingSand _mapGenerator;
+		HeightToVertexConvertor conv;
+
+		bool meshUpdated;
+
+		std::thread _rendering_thread;
+
+		void renderingFunction();
 
 		void mainLoop();
 		void initApp();
+		void renderingThread();
 
 	public:
 		UrcanApp();

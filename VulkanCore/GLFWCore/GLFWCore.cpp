@@ -52,8 +52,6 @@ static void keyCallback(GLFWwindow *window, int key, int, int action, int) {
 		}
 	}
 
-	if (key == GLFW_KEY_R && action == GLFW_PRESS)
-		Camera::getInstance()->setRotation({0, Camera::getInstance()->rotation.y, 0});
 	if (key == GLFW_KEY_U && action == GLFW_PRESS)
 		Camera::getInstance()->rotate({45.0, 0.0, 0.0});
 	if (key == GLFW_KEY_I && action == GLFW_PRESS)
@@ -62,6 +60,15 @@ static void keyCallback(GLFWwindow *window, int key, int, int action, int) {
 		Camera::getInstance()->rotate({-45.0, 0.0, 0.0});
 	if (key == GLFW_KEY_K && action == GLFW_PRESS)
 		Camera::getInstance()->rotate({0.0, 0.0, -45.0});
+
+	if (keyHold[GLFW_KEY_SPACE]) {
+		if (Camera::getInstance()->zVelocity == 0) {
+			Camera::getInstance()->zVelocity = 60.0f;
+		}
+	}
+	if (keyHold[GLFW_KEY_R] && action == GLFW_PRESS) {
+		std::thread(&urcan::UrcanApp::regenMap, urcan::UrcanApp::getInstance()).detach();
+	}
 }
 
 static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
@@ -125,14 +132,6 @@ void urcan::GLFWCore::moveTurn()
 	if (keyHold[GLFW_KEY_D]) {
 		trans += glm::normalize(glm::cross(camFront, glm::vec3(0, 0, 1))) * moveSpeed;
 		moved = true;
-    }
-    if (keyHold[GLFW_KEY_SPACE]) {
-        if (Camera::getInstance()->zVelocity == 0) {
-            Camera::getInstance()->zVelocity = 60.0f;
-        }
-    }
-    if (keyHold[GLFW_KEY_R]) {
-        urcan::UrcanApp::getInstance()->regenMap();
     }
 
 	if (!Camera::getInstance()->flyMod) {

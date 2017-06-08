@@ -4,27 +4,24 @@
 
 #include <GLFW/glfw3.h>
 #include <Chrono.hh>
-#include "HeightToVertexConvertor.hh"
 #include "UrcanApp.hh"
 #include "Camera.hh"
 
 const uint32_t urcan::UrcanApp::_mapWidth = 1000;
 const uint32_t urcan::UrcanApp::_mapDepth = 1000;
 const uint32_t urcan::UrcanApp::_mapHeight = 400;
-const uint32_t urcan::UrcanApp::_nbPiles = 300;
-const float urcan::UrcanApp::_dispersion = 0.2;
+const uint32_t urcan::UrcanApp::_nbPiles = 100;
+const float urcan::UrcanApp::_dispersion = 0.3;
 
 urcan::UrcanApp::UrcanApp() : _mapGenerator(_mapWidth, _mapDepth, 0, _mapHeight, _nbPiles, _dispersion) {
-
+	meshUpdated = false;
 }
 
 urcan::UrcanApp::~UrcanApp() {
-
 }
 
 void urcan::UrcanApp::mainLoop() {
 	static const double fps_max = 600.0;
-	HeightToVertexConvertor conv;
 	conv.feed(this->_mapGenerator.getMap(), 0, 0, this->_mapGenerator.getLowestHeight(), this->_mapGenerator.getHighestHeight());
 	_context->updateMesh(conv.getVertices(), conv.getIndexes());
 	Camera::getInstance()->translate({-static_cast<int32_t>(_mapWidth / 2), -static_cast<int32_t>(_mapDepth / 2), -static_cast<int32_t>(this->_mapGenerator.getHighestHeight())});
@@ -32,13 +29,14 @@ void urcan::UrcanApp::mainLoop() {
     while (!glfwWindowShouldClose(_window)) {
 	    chrono.start();
 		glfwPollEvents();
-		_context->updateUniformBuffer();
-		_context->drawFrame();
+		renderingThread();
 	    while (chrono.getTime() < 1.0 / fps_max)
 		    std::this_thread::__sleep_for(std::chrono::seconds(0), std::chrono::nanoseconds(
 				    static_cast<int>(100000000 / fps_max)));
 	    std::cout << "FPS: " << static_cast<int>(1.0 / chrono.getTime()) << std::endl;
 	}
+	if (this->_rendering_thread.joinable())
+		this->_rendering_thread.join();
 	_context->waitIdle();
 }
 
@@ -57,9 +55,23 @@ const FallingSand &urcan::UrcanApp::getMapGenerator() const {
 }
 
 void urcan::UrcanApp::regenMap() {
-    HeightToVertexConvertor conv;
-
     this->_mapGenerator = FallingSand(_mapWidth, _mapDepth, 0, _mapHeight, _nbPiles, _dispersion);
     conv.feed(this->_mapGenerator.getMap(), 0, 0, this->_mapGenerator.getLowestHeight(), this->_mapGenerator.getHighestHeight());
-    _context->updateMesh(conv.getVertices(), conv.getIndexes());
+	meshUpdated = true;
+}
+
+void urcan::UrcanApp::renderingThread() {
+	if (this->_rendering_thread.joinable())
+		this->_rendering_thread.join();
+	this->_rendering_thread = std::thread(&urcan::UrcanApp::renderingFunction, this);
+}
+
+void urcan::UrcanApp::renderingFunction() {
+	_context->waitIdle();
+	if (meshUpdated) {
+		_context->updateMesh(conv.getVertices(), conv.getIndexes());
+		meshUpdated = false;
+	}
+	_context->updateUniformBuffer();
+	_context->drawFrame();
 }
