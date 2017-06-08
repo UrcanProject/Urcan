@@ -6,7 +6,7 @@
 #define VULKAN_URCANAPP_HH
 
 #include <GLFW/glfw3.h>
-#include "FallingSand.hh"
+#include "IMapGenerator.hh"
 #include "UrcanInstance.hh"
 
 namespace urcan
@@ -20,7 +20,7 @@ namespace urcan
 		static const uint32_t _mapHeight;
 		static const uint32_t _nbPiles;
 		static const float _dispersion;
-		FallingSand _mapGenerator;
+		IMapGenerator *_mapGenerator;
 
 		void mainLoop();
 		void initApp();
@@ -31,7 +31,7 @@ namespace urcan
 
 	public:
 		void run();
-		const FallingSand &getMapGenerator() const;
+		const IMapGenerator &getMapGenerator() const;
         void regenMap();
 	};
 }

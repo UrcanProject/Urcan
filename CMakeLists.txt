@@ -20,7 +20,7 @@ set(SOURCE_FILES main.cpp VulkanCore/BasicConfiguration.hpp VulkanCore/UrcanInst
         VulkanCore/Buffers/Vertex.cpp VulkanCore/Buffers/Vertex.hh VulkanCore/Buffers/UniformBufferObject.cpp
         VulkanCore/Buffers/UniformBufferObject.hh VulkanCore/HeightToVertexConvertor.cpp
         VulkanCore/HeightToVertexConvertor.hh Terrain/FallingSand.hh Terrain/FallingSand.cpp
-        ClassUtils/Color.cpp ClassUtils/Color.hpp ClassUtils/FastRand.cpp ClassUtils/FastRand.hpp Terrain/Collision.cpp Terrain/Collision.hpp)
+        ClassUtils/Color.cpp ClassUtils/Color.hpp ClassUtils/FastRand.cpp ClassUtils/FastRand.hpp Terrain/Collision.cpp Terrain/Collision.hpp Terrain/PerlinNoise.cpp Terrain/PerlinNoise.hh Terrain/IMapGenerator.hh)
 add_executable(Vulkan ${SOURCE_FILES})
 
 target_link_libraries(Vulkan glfw3 gdi32 opengl32 vulkan-1 pthread)

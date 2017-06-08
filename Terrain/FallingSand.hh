@@ -6,8 +6,9 @@
 #define SAND_FALLINGSAND_HPP
 
 #include <vector>
+#include "IMapGenerator.hh"
 
-class FallingSand {
+class FallingSand : public IMapGenerator {
 private:
     unsigned int _width;
     unsigned int _height;
@@ -23,9 +24,9 @@ public:
                 unsigned int density, float dispertion_proba_percent);
     void fall(unsigned int x, unsigned int y, unsigned int height);
     void dump() const;
-    const std::vector<std::vector<unsigned int>> &getMap() const;
-    uint32_t getHighestHeight() const;
-    uint32_t getLowestHeight() const;
+    const std::vector<std::vector<unsigned int>> &getMap() const override;
+    uint32_t getHighestHeight() const override;
+    uint32_t getLowestHeight() const override;
 
 };
 
