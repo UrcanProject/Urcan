@@ -7,10 +7,10 @@
 #include "UrcanApp.hh"
 #include "Camera.hh"
 
-const uint32_t urcan::UrcanApp::_mapWidth = 1000;
-const uint32_t urcan::UrcanApp::_mapDepth = 1000;
-const uint32_t urcan::UrcanApp::_mapHeight = 400;
-const uint32_t urcan::UrcanApp::_nbPiles = 100;
+const uint32_t urcan::UrcanApp::_mapWidth = 100;
+const uint32_t urcan::UrcanApp::_mapDepth = 100;
+const uint32_t urcan::UrcanApp::_mapHeight = 15;
+const uint32_t urcan::UrcanApp::_nbPiles = 10;
 const float urcan::UrcanApp::_dispersion = 0.3;
 
 urcan::UrcanApp::UrcanApp() : _mapGenerator(_mapWidth, _mapDepth, 0, _mapHeight, _nbPiles, _dispersion) {
@@ -33,7 +33,7 @@ void urcan::UrcanApp::mainLoop() {
 	    while (chrono.getTime() < 1.0 / fps_max)
 		    std::this_thread::__sleep_for(std::chrono::seconds(0), std::chrono::nanoseconds(
 				    static_cast<int>(100000000 / fps_max)));
-	    std::cout << "FPS: " << static_cast<int>(1.0 / chrono.getTime()) << std::endl;
+	    //std::cout << "FPS: " << static_cast<int>(1.0 / chrono.getTime()) << std::endl;
 	}
 	if (this->_rendering_thread.joinable())
 		this->_rendering_thread.join();
@@ -67,7 +67,6 @@ void urcan::UrcanApp::renderingThread() {
 }
 
 void urcan::UrcanApp::renderingFunction() {
-	_context->waitIdle();
 	if (meshUpdated) {
 		_context->updateMesh(conv.getVertices(), conv.getIndexes());
 		meshUpdated = false;

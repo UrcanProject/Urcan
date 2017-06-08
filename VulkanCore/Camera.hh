@@ -34,7 +34,7 @@ public:
 	float rotationSpeed = 1.0f;
 	float movementSpeed = 1.0f;
 
-	bool flyMod = false;
+	bool flyMod = true;
 
 	struct
 	{
