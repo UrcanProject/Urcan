@@ -81,15 +81,19 @@ void HeightToVertexConvertor::feed(std::vector<std::vector<uint32_t>> const &hei
 			                                    x > 0 ? heights[y][x - 1] : heights[y][x],
 			                                    y < heights.size() - 1 ? heights[y + 1][x] : heights[y][x],
 			                                    x < heights[y].size() - 1 ? heights[y][x + 1] : heights[y][x]}); z > 0; z--) {
-				for (uint32_t i = 0; i < verticesMod.size(); i++)
+				for (uint32_t i = 0; i < verticesMod.size(); i++) {
 					this->_vertices[last_vertices++] = {
 							combineVec3(i, x + startX, y + startZ, heights[y][x] - (z - 1)),
 							color.getColor(minHeight, maxHeight, heights[y][x] - (z - 1))
 					};
+				}
 
-				for (unsigned int i : indicesMod)
-					this->_indexes[last_indexes++] = ((x + y * heights[y].size()) * (verticesMod.size()) + i);
+				for (unsigned int i : indicesMod) {
+					//std::cout << x + y * heights[y].size() << " - " << (last_vertices - 1) / verticesMod.size() << std::endl;
+					this->_indexes[last_indexes++] = (((last_vertices - 1) / verticesMod.size()) * (verticesMod.size()) + i);
+				}
 			}
+	std::cout << "Data in the end " << last_vertices << " " << last_indexes << " " << blocks << std::endl;
 }
 
 const std::vector<Vertex> &HeightToVertexConvertor::getVertices() const {

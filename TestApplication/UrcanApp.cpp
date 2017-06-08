@@ -9,16 +9,16 @@
 #include "UrcanApp.hh"
 #include "Camera.hh"
 
-const uint32_t urcan::UrcanApp::_mapWidth = 100;
-const uint32_t urcan::UrcanApp::_mapDepth = 100;
-const uint32_t urcan::UrcanApp::_mapHeight = 100;
+const uint32_t urcan::UrcanApp::_mapWidth = 200;
+const uint32_t urcan::UrcanApp::_mapDepth = 200;
+const uint32_t urcan::UrcanApp::_mapHeight = 10;
 const uint32_t urcan::UrcanApp::_nbPiles = 100;
 const float urcan::UrcanApp::_dispersion = 0.3;
 
 urcan::UrcanApp::UrcanApp() {
 	meshUpdated = false;
 	//this->_mapGenerator = new FallingSand(_mapWidth, _mapDepth, 0, _mapHeight, _nbPiles, _dispersion);
-    this->_mapGenerator = new PerlinNoise(_mapWidth, _mapDepth, _mapHeight, 0.9f, 2);
+    this->_mapGenerator = new PerlinNoise(_mapWidth, _mapDepth, _mapHeight, 0.5f, 16);
 }
 
 urcan::UrcanApp::~UrcanApp() {
