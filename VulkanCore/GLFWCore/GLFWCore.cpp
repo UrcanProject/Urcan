@@ -134,7 +134,7 @@ void urcan::GLFWCore::moveTurn()
 		moved = true;
     }
 
-	if (!Camera::getInstance()->flyMod) {
+	if (!Camera::getInstance()->flyMod) { /* todo fix camera jumps when moving on flat */
 		trans = glm::vec3(trans.x, trans.y, -Camera::getInstance()->zVelocity * time);
 		if (Camera::getInstance()->zVelocity != 0.0 || moved)
 			Camera::getInstance()->zVelocity -= Camera::getInstance()->gravity * time;

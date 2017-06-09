@@ -26,18 +26,21 @@ void Collision::handleCamera(const glm::vec3 &lastPos, const glm::vec3 &newPos) 
                                    diff.z / maxCoord);
         glm::vec3 it = glm::vec3(0.0, 0.0, 0.0);
         for (uint32_t i = 0 ; i < maxCoord ; i++) {
-            if (isOutSideMap(lastPos)) {
+            /*if (isOutSideMap(lastPos)) {
                 Camera::getInstance()->setPosition(lastPos);
                 return ;
-            }
+            }*/
+
             if (cubeCollide(map, tmp.x + it.x, tmp.y + it.y, tmp.z + it.z)) {
                 Collision::onCameraCollision(map, lastPos, glm::vec3(tmp.x + it.x, tmp.y + it.y, tmp.z + it.z), false);
                 return ;
             }
+
             if (cubeCollide(map, tmp.x + it.x, tmp.y + it.y, (tmp.z + it.z) + 1)) {
                 Collision::onCameraCollision(map, lastPos, glm::vec3(tmp.x + it.x, tmp.y + it.y, tmp.z + it.z + 1), true);
                 return ;
             }
+
             it += step;
         }
     }
@@ -74,7 +77,7 @@ void Collision::onCameraCollision(const std::vector<std::vector<uint32_t>> &map,
     Camera::getInstance()->setPosition(lastPos);
 }
 
-bool Collision::isOutSideMap(const glm::vec3 &newPos) {
+bool Collision::isOutSideMap(const glm::vec3 &newPos) { /* fixme getting stuck when it return true*/
     const urcan::UrcanApp *instance = urcan::UrcanApp::getInstance();
 
     if ((- std::floor(newPos.x)) < Collision::_outerCubeBoundary || (- std::floor(newPos.x)) >= (instance->getMapWidth() - Collision::_outerCubeBoundary ))
