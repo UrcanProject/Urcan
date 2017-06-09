@@ -9,16 +9,16 @@
 #include "UrcanApp.hh"
 #include "Camera.hh"
 
-const uint32_t urcan::UrcanApp::_mapWidth = 200;
-const uint32_t urcan::UrcanApp::_mapDepth = 200;
-const uint32_t urcan::UrcanApp::_mapHeight = 10;
+const uint32_t urcan::UrcanApp::_mapWidth = 1000;
+const uint32_t urcan::UrcanApp::_mapDepth = 1000;
+const uint32_t urcan::UrcanApp::_mapHeight = 50;
 const uint32_t urcan::UrcanApp::_nbPiles = 100;
 const float urcan::UrcanApp::_dispersion = 0.3;
 
 urcan::UrcanApp::UrcanApp() {
 	meshUpdated = false;
 	//this->_mapGenerator = new FallingSand(_mapWidth, _mapDepth, 0, _mapHeight, _nbPiles, _dispersion);
-    this->_mapGenerator = new PerlinNoise(_mapWidth, _mapDepth, _mapHeight, 0.5f, 16);
+    this->_mapGenerator = new PerlinNoise(_mapWidth, _mapDepth, _mapHeight, 0.2f, 10);
 }
 
 urcan::UrcanApp::~UrcanApp() {
@@ -60,7 +60,7 @@ const IMapGenerator &urcan::UrcanApp::getMapGenerator() const {
 }
 
 void urcan::UrcanApp::regenMap() {
-	this->_mapGenerator = new PerlinNoise(_mapWidth, _mapDepth, this->_mapHeight);
+	this->_mapGenerator = new PerlinNoise(_mapWidth, _mapDepth, this->_mapHeight, 0.3f);
 	conv.feed(this->_mapGenerator->getMap(), 0, 0, this->_mapGenerator->getLowestHeight(), this->_mapGenerator->getHighestHeight());
 	meshUpdated = true;
 }
@@ -78,4 +78,16 @@ void urcan::UrcanApp::renderingFunction() {
 	}
 	_context->updateUniformBuffer();
 	_context->drawFrame();
+}
+
+uint32_t urcan::UrcanApp::getMapWidth() const {
+    return (this->_mapWidth);
+}
+
+uint32_t urcan::UrcanApp::getMapDepth() const {
+    return (this->_mapDepth);
+}
+
+uint32_t urcan::UrcanApp::getMapHeight() const {
+    return (this->_mapHeight);
 }

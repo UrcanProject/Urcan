@@ -39,7 +39,13 @@ namespace urcan
 		void run();
 		const IMapGenerator &getMapGenerator() const;
         void regenMap();
-	};
+
+        uint32_t getMapWidth() const;
+
+        uint32_t getMapDepth() const;
+
+        uint32_t getMapHeight() const;
+    };
 }
 
 
