@@ -140,9 +140,7 @@ void urcan::GLFWCore::moveTurn()
 			Camera::getInstance()->zVelocity -= Camera::getInstance()->gravity * time;
 		glm::vec3 prevPos = Camera::getInstance()->position;
 		Camera::getInstance()->translate(trans);
-		if (Collision::cameraCollide()) {
-			Camera::getInstance()->setPosition(prevPos);
-		}
+		Collision::handleCamera(prevPos, Camera::getInstance()->position);
 	} else {
 		Camera::getInstance()->translate(trans);
 	}
