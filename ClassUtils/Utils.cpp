@@ -3,7 +3,7 @@
 //
 
 #include <stdexcept>
-#include "Utils.h"
+#include "Utils.hh"
 
 std::vector<char> urcan::utils::readFile(const std::string& filename) {
 	std::ifstream file(filename, std::ios::ate | std::ios::binary);
