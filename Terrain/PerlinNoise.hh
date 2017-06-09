@@ -21,7 +21,11 @@ private:
     uint32_t _nbOctaves;
     uint32_t _maxHeight;
     float _persistance;
+    float _minBoundary;
+    float _maxBoundary;
 
+    void findBoundary();
+    void genMap();
 public:
     static int maxPrime;
 

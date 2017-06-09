@@ -59,19 +59,10 @@ PerlinNoise::PerlinNoise(uint32_t width, uint32_t height, uint32_t maxHeight, fl
         this->_map.at(i).resize(this->_width);
     }
 
-    for (unsigned int y = 0 ; y < this->_height ; y++) {
-        for (unsigned int x = 0; x < this->_width; x++) {
-            this->_map[y][x] = static_cast<uint32_t>(((std::abs(this->perlinNoise(x, y)) * 0.4) +
-                    std::abs(this->perlinNoise(x + 20, y) * 0.15) +
-                    std::abs(this->perlinNoise(x - 20, y) * 0.15) +
-                    std::abs(this->perlinNoise(x, y + 20) * 0.15) +
-                    std::abs(this->perlinNoise(x, y - 20) * 0.15)) * this->_maxHeight);
-            if (this->_map[y][x] > this->_highest)
-                this->_highest = this->_map[y][x];
-            if (this->_map[y][x] < this->_lowest)
-                this->_lowest = this->_map[y][x];
-        }
-    }
+    this->findBoundary();
+    this->genMap();
+    std::cout << "lowest boundary: " << this->_minBoundary << std::endl;
+    std::cout << "highest boundary: " << this->_maxBoundary << std::endl;
     std::cout << "lowest: " << this->_lowest << std::endl;
     std::cout << "highest: " << this->_highest << std::endl;
 }
@@ -147,4 +138,31 @@ float PerlinNoise::perlinNoise(float x, float y) {
         total += this->interpolateNoise((this->_prime + i) % PerlinNoise::maxPrime, x / frequency, y / frequency) * amplitude;
     }
     return (total / frequency);
+}
+
+void PerlinNoise::findBoundary() {
+    this->_minBoundary = std::abs(this->perlinNoise(0, 0));
+    this->_maxBoundary = std::abs(this->perlinNoise(0, 0));
+
+    for (unsigned int y = 0 ; y < this->_height ; y++) {
+        for (unsigned int x = 0; x < this->_width; x++) {
+            const float tmp = this->perlinNoise(x, y);
+            if (tmp > this->_maxBoundary)
+                this->_maxBoundary = tmp;
+            if (tmp < this->_minBoundary)
+                this->_minBoundary = tmp;
+        }
+    }
+}
+
+void PerlinNoise::genMap() {
+    for (unsigned int y = 0 ; y < this->_height ; y++) {
+        for (unsigned int x = 0; x < this->_width; x++) {
+            this->_map[y][x] = static_cast<uint32_t>(((this->perlinNoise(x, y) - this->_minBoundary) / (this->_maxBoundary - this->_minBoundary)) * this->_maxHeight);
+            if (this->_map[y][x] > this->_highest)
+                this->_highest = this->_map[y][x];
+            if (this->_map[y][x] < this->_lowest)
+                this->_lowest = this->_map[y][x];
+        }
+    }
 }
