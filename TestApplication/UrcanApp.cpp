@@ -3,22 +3,28 @@
 //
 
 #include <GLFW/glfw3.h>
+#include <FallingSand.hh>
+#include "MapGeneratorConfig.hh"
 #include "PerlinNoise.hh"
 #include "HeightToVertexConvertor.hh"
 #include "Chrono.hh"
 #include "UrcanApp.hh"
 #include "Camera.hh"
 
-const uint32_t urcan::UrcanApp::_mapWidth = 1000;
-const uint32_t urcan::UrcanApp::_mapDepth = 1000;
-const uint32_t urcan::UrcanApp::_mapHeight = 50;
-const uint32_t urcan::UrcanApp::_nbPiles = 100;
-const float urcan::UrcanApp::_dispersion = 0.3;
-
 urcan::UrcanApp::UrcanApp() {
 	meshUpdated = false;
+    MapGeneratorConfig &config = *MapGeneratorConfig::getInstance();
+
+	this->_width = config.getMapWidth();
+	this->_height = config.getMapHeight();
+	this->_depth = config.getMapDepth();
 	//this->_mapGenerator = new FallingSand(_mapWidth, _mapDepth, 0, _mapHeight, _nbPiles, _dispersion);
-    this->_mapGenerator = new PerlinNoise(_mapWidth, _mapDepth, _mapHeight, 0.2f, 10);
+    if (config.getGenerator() == 0) {
+        this->_mapGenerator = new FallingSand(config.getMapWidth(), config.getMapDepth(), 0, config.getMapHeight(), config.getNbPiles(), config.getDispersion());
+    } else {
+        this->_mapGenerator = new PerlinNoise(config.getMapWidth(), config.getMapDepth(), config.getMapHeight(),
+                                              config.getPersistance(), config.getOctaves());
+    }
 }
 
 urcan::UrcanApp::~UrcanApp() {
@@ -26,10 +32,12 @@ urcan::UrcanApp::~UrcanApp() {
 }
 
 void urcan::UrcanApp::mainLoop() {
-	static const double fps_max = 600.0;
+    const MapGeneratorConfig &config = *MapGeneratorConfig::getInstance();
+
+    static const double fps_max = 600.0;
 	conv.feed(this->_mapGenerator->getMap(), 0, 0, this->_mapGenerator->getLowestHeight(), this->_mapGenerator->getHighestHeight());
 	_context->updateMesh(conv.getVertices(), conv.getIndexes());
-	Camera::getInstance()->translate({-static_cast<int32_t>(_mapWidth / 2), -static_cast<int32_t>(_mapDepth / 2), -static_cast<int32_t>(this->_mapGenerator->getHighestHeight())});
+	Camera::getInstance()->translate({-static_cast<int32_t>(config.getMapWidth() / 2), -static_cast<int32_t>(config.getMapDepth() / 2), -static_cast<int32_t>(this->_mapGenerator->getHighestHeight())});
 	Chrono chrono;
     while (!glfwWindowShouldClose(_window)) {
 	    chrono.start();
@@ -60,7 +68,16 @@ const IMapGenerator &urcan::UrcanApp::getMapGenerator() const {
 }
 
 void urcan::UrcanApp::regenMap() {
-	this->_mapGenerator = new PerlinNoise(_mapWidth, _mapDepth, this->_mapHeight, 0.3f);
+    MapGeneratorConfig &config = *MapGeneratorConfig::getInstance();
+
+    config.reload();
+    //this->_mapGenerator = new FallingSand(_mapWidth, _mapDepth, 0, _mapHeight, _nbPiles, _dispersion);
+    if (config.getGenerator() == 0) {
+        this->_mapGenerator = new FallingSand(config.getMapWidth(), config.getMapDepth(), 0, config.getMapHeight(), config.getNbPiles(), config.getDispersion());
+    } else {
+        this->_mapGenerator = new PerlinNoise(config.getMapWidth(), config.getMapDepth(), config.getMapHeight(),
+                                              config.getPersistance(), config.getOctaves());
+    }
 	conv.feed(this->_mapGenerator->getMap(), 0, 0, this->_mapGenerator->getLowestHeight(), this->_mapGenerator->getHighestHeight());
 	meshUpdated = true;
 }
@@ -81,13 +98,13 @@ void urcan::UrcanApp::renderingFunction() {
 }
 
 uint32_t urcan::UrcanApp::getMapWidth() const {
-    return (this->_mapWidth);
+	return (_width);
 }
 
 uint32_t urcan::UrcanApp::getMapDepth() const {
-    return (this->_mapDepth);
+	return (_depth);
 }
 
 uint32_t urcan::UrcanApp::getMapHeight() const {
-    return (this->_mapHeight);
+	return (_height);
 }

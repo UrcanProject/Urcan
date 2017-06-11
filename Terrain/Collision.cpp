@@ -5,6 +5,8 @@
 #include <glm/vec3.hpp>
 #include <cmath>
 #include <ostream>
+#include <Singleton.hpp>
+#include "MapGeneratorConfig.hh"
 #include "Camera.hh"
 #include "UrcanApp.hh"
 #include "Collision.hpp"
