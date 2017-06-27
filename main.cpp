@@ -10,10 +10,10 @@
 #include "UrcanApp.hh"
 
 int main() {
-	urcan::UrcanApp app;
+    urcan::UrcanApp *app = urcan::UrcanApp::getInstance(); /* todo shared pointer ? */
 
 	try {
-		app.run();
+		app->run();
 	} catch (const std::runtime_error& e) {
 		std::cerr << e.what() << std::endl;
 		return EXIT_FAILURE;

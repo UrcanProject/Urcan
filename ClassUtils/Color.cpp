@@ -3,6 +3,7 @@
 //
 
 #include <cstdint>
+#include <algorithm>
 #include <cmath>
 #include "Color.hpp"
 
@@ -76,7 +77,7 @@ const t_color *Color::getColor(unsigned int at) const {
 }
 
 glm::vec3 Color::getColor(unsigned int min, unsigned int max, unsigned int val) {
-    const t_color *c = this->getColor(static_cast<unsigned int>(this->_image.width * static_cast<float>(static_cast<float>((val - min)) / static_cast<float>((max - min)))));
+    const t_color *c = this->getColor(static_cast<unsigned int>((this->_image.width - 1) * static_cast<float>((val - min)) / static_cast<float>((max - min))));
 
     return glm::vec3({c->argb[0] / 255.0f, c->argb[1] / 255.0f, c->argb[2] / 255.0f});
 }

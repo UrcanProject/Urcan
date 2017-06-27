@@ -101,7 +101,7 @@ namespace urcan {
 
 	private:
 		UrcanInstance();
-		UrcanInstance(UrcanInstance const& src);
+		UrcanInstance(UrcanInstance const& src) = default;
 		UrcanInstance& operator=(UrcanInstance const& src);
 
 	private:

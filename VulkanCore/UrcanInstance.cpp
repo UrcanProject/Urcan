@@ -483,7 +483,6 @@ void urcan::UrcanInstance::createRenderPass() {
 												 vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal};
 	vk::AttachmentReference depthAttachmentRef = {1, vk::ImageLayout::eDepthStencilAttachmentOptimal};
 
-
 	vk::SubpassDescription subpass = {vk::SubpassDescriptionFlags(), vk::PipelineBindPoint::eGraphics, 0, nullptr, 1, &colorAttachmentRef};
 	subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
@@ -710,6 +709,7 @@ void urcan::UrcanInstance::createUniformBuffer() {
 }
 
 #include <Camera.hh>
+#include <Chrono.hh>
 
 static std::ostream& operator<<(std::ostream &s, glm::vec3 v)
 {
@@ -717,31 +717,12 @@ static std::ostream& operator<<(std::ostream &s, glm::vec3 v)
 }
 
 void urcan::UrcanInstance::updateUniformBuffer() {
-	//static auto startTime = std::chrono::high_resolution_clock::now();
-	//auto currentTime = std::chrono::high_resolution_clock::now();
-	//float time = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count() / 10000.0f;
 	UniformBufferObject ubo;
 
-	//std::cout << "State of rot : " << Camera::getInstance()->rotation.x << " " << Camera::getInstance()->rotation.y << " " << Camera::getInstance()->rotation.z << std::endl;
-
-	/*ubo.model = glm::rotate(ubo.model, glm::radians(Camera::getInstance()->rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
-	ubo.model = glm::rotate(ubo.model, glm::radians(Camera::getInstance()->rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
-	ubo.model = glm::rotate(ubo.model, glm::radians(Camera::getInstance()->rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
-	//ubo.model = glm::rotate(glm::mat4(), time * glm::radians(135.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	auto transM = glm::translate(glm::mat4(), Camera::getInstance()->position);
-
-	//td::cout << Camera::getInstance()->position << std::endl;
-
-	ubo.model *= transM;*/
-
-	//ubo.view = glm::lookAt(glm::vec3(2.0001f, 2.0001f, 2.0001f), glm::vec3(2.0000f, 2.0000f, 2.0000f), glm::vec3(0.0f, 0.0f, 1.0f));
-	//Camera::getInstance()->setPerspective(glm::radians(60.0f), _swapChainExtent.width / static_cast<float>(_swapChainExtent.height), 0.1f, 256.0f);
-	std::cout << "Position is " << Camera::getInstance()->position << std::endl;
-	std::cout << "Rotation is " << Camera::getInstance()->rotation << std::endl;
-	ubo.model = glm::rotate(glm::mat4(), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	this->_glfwCore.moveTurn();
+	ubo.model = glm::rotate(glm::mat4(), glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	ubo.view = Camera::getInstance()->matrices.view;
-	ubo.proj = glm::perspective(glm::radians(45.0f), (float)WIDTH / (float)HEIGHT, 0.01f, 256.0f);
-	//ubo.proj[1][1] *= -1;
+	ubo.proj = glm::perspective(glm::radians(60.0f), (float)WIDTH / (float)HEIGHT, 0.001f, 2048.0f);
 
 	void* data;
 	_device.get().mapMemory(_uniformStagingBufferMemory, 0, sizeof(ubo), static_cast<vk::MemoryMapFlagBits>(0), &data);
@@ -953,8 +934,11 @@ void urcan::UrcanInstance::updateMesh() {
 }
 
 void urcan::UrcanInstance::updateMesh(std::vector<Vertex> const &srcVertex, std::vector<uint32_t> const &srcIdx) {
+	Chrono chrono;
+	chrono.start();
 	setVertices(srcVertex);
 	setIndices(srcIdx);
 	updateMesh();
+	std::cout << "Rebuild time = " << chrono.getTime() << " s" << std::endl;
 }
 

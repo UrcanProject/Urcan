@@ -11,7 +11,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include <Singleton.hpp>
+#include "Singleton.hpp"
 
 class Camera : public Singleton<Camera>
 {
@@ -28,8 +28,13 @@ public:
 	glm::vec3 rotation = glm::vec3();
 	glm::vec3 position = glm::vec3();
 
+	float gravity = 100.0000000f;
+	float zVelocity = -gravity;
+
 	float rotationSpeed = 1.0f;
 	float movementSpeed = 1.0f;
+
+	bool flyMod = true;
 
 	struct
 	{
@@ -43,6 +48,7 @@ public:
 		bool right = false;
 		bool up = false;
 		bool down = false;
+		bool space = false;
 	} keys;
 
 	bool moving();
